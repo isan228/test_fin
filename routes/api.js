@@ -3,7 +3,7 @@ const router = express.Router();
 const { ApiKey, Payment } = require('../models');
 const crypto = require('crypto');
 const { generateKeyPair } = require('../utils/keyGenerator');
-const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 
 // Получить все API ключи
 router.get('/keys', async (req, res) => {
@@ -149,7 +149,7 @@ router.post('/keys/generate', async (req, res) => {
 // Создать API ключ от Финика
 router.post('/keys/create-finik', async (req, res) => {
   try {
-    const { name, publicKey, privateKey, callbackUrl, description } = req.body;
+    const { name, publicKey, privateKey, callbackUrl, finikApiKey, accountId, environment, description } = req.body;
 
     if (!name || !publicKey || !privateKey || !callbackUrl) {
       return res.status(400).json({
@@ -164,50 +164,18 @@ router.post('/keys/create-finik', async (req, res) => {
       publicKey,
       privateKey,
       callbackUrl,
+      finikApiKey: finikApiKey || null,
+      accountId: accountId || null,
+      environment: environment || 'production',
       description: description || null,
       isActive: true
     });
 
-    // Здесь будет запрос к API Финика для создания API ключа
-    // Пока просто сохраняем данные, после получения документации добавим реальный запрос
-    const finikApiUrl = process.env.FINIK_API_URL || 'https://api.finik.ru';
-    
-    try {
-      // Пример запроса (нужно будет обновить согласно документации Финика)
-      const response = await axios.post(`${finikApiUrl}/api/keys`, {
-        name: name,
-        publicKey: publicKey,
-        callbackUrl: callbackUrl
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      // Обновляем запись с полученным API ключом от Финика
-      if (response.data && response.data.apiKey) {
-        await apiKey.update({
-          finikApiKey: response.data.apiKey
-        });
-      }
-
-      res.status(201).json({ 
-        success: true, 
-        data: {
-          ...apiKey.toJSON(),
-          finikApiKey: response.data?.apiKey || null
-        },
-        message: 'API ключ успешно создан'
-      });
-    } catch (finikError) {
-      // Если запрос к Финику не удался, все равно сохраняем ключи
-      console.error('Ошибка при создании ключа в Финике:', finikError.message);
-      res.status(201).json({ 
-        success: true, 
-        data: apiKey,
-        warning: 'Ключи сохранены локально, но не удалось создать ключ в Финике. Проверьте настройки API.'
-      });
-    }
+    res.status(201).json({ 
+      success: true, 
+      data: apiKey,
+      message: 'API ключ успешно создан. Убедитесь, что вы отправили публичный ключ представителям Финика для получения API ключа и accountId.'
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -216,7 +184,16 @@ router.post('/keys/create-finik', async (req, res) => {
 // Создать тестовый платеж
 router.post('/payments/test', async (req, res) => {
   try {
-    const { apiKeyId, amount, currency = 'RUB', description } = req.body;
+    const { 
+      apiKeyId, 
+      amount, 
+      redirectUrl, 
+      merchantCategoryCode = '0742',
+      name_en,
+      description,
+      startDate,
+      endDate
+    } = req.body;
 
     if (!apiKeyId || !amount) {
       return res.status(400).json({
@@ -234,57 +211,101 @@ router.post('/payments/test', async (req, res) => {
       return res.status(400).json({ success: false, error: 'API ключ неактивен' });
     }
 
+    if (!apiKey.finikApiKey) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'API ключ от Финика не указан. Укажите finikApiKey в настройках ключа.' 
+      });
+    }
+
+    if (!apiKey.accountId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Account ID не указан. Укажите accountId в настройках ключа.' 
+      });
+    }
+
     // Создаем платеж в БД
-    const paymentId = `test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const { v4: uuidv4 } = require('uuid');
+    const paymentId = uuidv4();
     
     const payment = await Payment.create({
       apiKeyId: apiKey.id,
       paymentId: paymentId,
       amount: parseFloat(amount),
-      currency: currency,
+      currency: 'KGS', // Валюта Кыргызстана
       status: 'pending',
       callbackData: { description: description || 'Тестовый платеж' }
     });
 
-    // Здесь будет запрос к API Финика для создания платежа
-    // Пока просто возвращаем созданный платеж
-    const finikApiUrl = process.env.FINIK_API_URL || 'https://api.finik.ru';
+    // Создаем платеж через API Финика
+    const { createPayment } = require('../utils/finikApi');
     
     try {
-      // Пример запроса (нужно будет обновить согласно документации Финика)
-      const response = await axios.post(`${finikApiUrl}/api/payments`, {
-        amount: amount,
-        currency: currency,
-        description: description || 'Тестовый платеж',
-        callbackUrl: apiKey.callbackUrl,
-        paymentId: paymentId
-      }, {
-        headers: {
-          'Authorization': `Bearer ${apiKey.finikApiKey}`,
-          'Content-Type': 'application/json'
+      const result = await createPayment({
+        amount: parseFloat(amount),
+        paymentId: paymentId,
+        redirectUrl: redirectUrl || apiKey.callbackUrl || `http://2.56.179.126:3000/callback/finik`,
+        accountId: apiKey.accountId,
+        merchantCategoryCode: merchantCategoryCode,
+        name_en: name_en || apiKey.name || 'Test Payment',
+        webhookUrl: apiKey.callbackUrl || `http://2.56.179.126:3000/callback/finik`,
+        description: description || null,
+        startDate: startDate ? parseInt(startDate) : undefined,
+        endDate: endDate ? parseInt(endDate) : undefined,
+        apiKey: apiKey.finikApiKey,
+        privateKey: apiKey.privateKey,
+        environment: apiKey.environment || 'production'
+      });
+
+      if (result.success) {
+        // Обновляем платеж данными от Финика
+        await payment.update({
+          callbackData: {
+            ...payment.callbackData,
+            paymentUrl: result.paymentUrl,
+            finikResponse: result
+          }
+        });
+
+        res.status(201).json({ 
+          success: true, 
+          data: payment,
+          paymentUrl: result.paymentUrl,
+          message: 'Платеж успешно создан в Финике'
+        });
+      } else {
+        // Обновляем платеж с ошибкой
+        await payment.update({
+          status: 'failed',
+          callbackData: {
+            ...payment.callbackData,
+            error: result.error,
+            statusCode: result.statusCode
+          }
+        });
+
+        res.status(400).json({ 
+          success: false, 
+          error: result.error,
+          statusCode: result.statusCode,
+          data: payment
+        });
+      }
+    } catch (finikError) {
+      console.error('Ошибка при создании платежа в Финике:', finikError);
+      await payment.update({
+        status: 'failed',
+        callbackData: {
+          ...payment.callbackData,
+          error: finikError.message
         }
       });
 
-      // Обновляем платеж данными от Финика
-      if (response.data) {
-        await payment.update({
-          status: response.data.status || 'pending',
-          callbackData: response.data
-        });
-      }
-
-      res.status(201).json({ 
-        success: true, 
-        data: payment,
-        finikResponse: response.data
-      });
-    } catch (finikError) {
-      // Если запрос к Финику не удался, все равно возвращаем созданный платеж
-      console.error('Ошибка при создании платежа в Финике:', finikError.message);
-      res.status(201).json({ 
-        success: true, 
-        data: payment,
-        warning: 'Платеж создан локально, но не удалось отправить в Финик. Проверьте настройки API.'
+      res.status(500).json({ 
+        success: false, 
+        error: 'Ошибка при создании платежа в Финике: ' + finikError.message,
+        data: payment
       });
     }
   } catch (error) {

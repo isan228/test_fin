@@ -2,57 +2,121 @@ const express = require('express');
 const router = express.Router();
 const { Payment, ApiKey } = require('../models');
 const crypto = require('crypto');
+const { verifyWebhookSignature } = require('../utils/finikApi');
 
-// Callback endpoint для обработки ответов от Финика
+// Callback endpoint для обработки webhook от Финика
 router.post('/finik', async (req, res) => {
   try {
-    console.log('Callback received from Finik:', JSON.stringify(req.body, null, 2));
+    console.log('Webhook received from Finik:', JSON.stringify(req.body, null, 2));
+    console.log('Headers:', JSON.stringify(req.headers, null, 2));
 
-    const callbackData = req.body;
+    const webhookData = req.body;
 
-    // Здесь нужно будет добавить проверку подписи согласно документации Финика
-    // Пока сохраняем данные как есть
+    // Определяем окружение из заголовков или используем production по умолчанию
+    // Можно добавить логику определения окружения
+    const environment = 'production'; // или 'beta'
 
-    // Ищем платеж по paymentId
+    // Проверяем подпись
+    const isValidSignature = verifyWebhookSignature(req, environment);
+    
+    if (!isValidSignature) {
+      console.error('Invalid signature in webhook');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid signature' 
+      });
+    }
+
+    // Проверяем timestamp (должен быть в пределах ±5 минут)
+    const timestamp = parseInt(req.headers['x-api-timestamp']);
+    const now = Date.now();
+    const timeDiff = Math.abs(now - timestamp);
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (timeDiff > fiveMinutes) {
+      console.error('Timestamp too old or too far in future');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid timestamp' 
+      });
+    }
+
+    // Обрабатываем данные webhook
+    const transactionId = webhookData.transactionId || webhookData.id;
+    const status = webhookData.status; // 'SUCCEEDED' или 'FAILED'
+    const amount = webhookData.amount;
+    const accountId = webhookData.accountId;
+
+    if (!transactionId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing transactionId' 
+      });
+    }
+
+    // Ищем платеж по transactionId или id
     let payment = await Payment.findOne({
-      where: { paymentId: callbackData.paymentId || callbackData.id }
+      where: { 
+        paymentId: transactionId 
+      }
     });
+
+    // Если платеж не найден, ищем по accountId и создаем новый
+    if (!payment && accountId) {
+      const apiKey = await ApiKey.findOne({ 
+        where: { 
+          accountId: accountId,
+          isActive: true 
+        } 
+      });
+
+      if (apiKey) {
+        payment = await Payment.create({
+          apiKeyId: apiKey.id,
+          paymentId: transactionId,
+          amount: amount || 0,
+          currency: 'KGS', // Валюта Кыргызстана
+          status: mapFinikStatus(status),
+          callbackData: webhookData
+        });
+      }
+    }
 
     if (payment) {
       // Обновляем существующий платеж
       await payment.update({
-        status: callbackData.status || payment.status,
-        callbackData: callbackData
-      });
-    } else {
-      // Создаем новый платеж (если callback пришел раньше, чем создание платежа)
-      // Нужно будет определить apiKeyId из данных callback
-      const defaultApiKey = await ApiKey.findOne({ where: { isActive: true } });
-      
-      payment = await Payment.create({
-        apiKeyId: defaultApiKey ? defaultApiKey.id : 1,
-        paymentId: callbackData.paymentId || callbackData.id || crypto.randomUUID(),
-        amount: callbackData.amount || 0,
-        currency: callbackData.currency || 'RUB',
-        status: callbackData.status || 'pending',
-        callbackData: callbackData
+        status: mapFinikStatus(status),
+        callbackData: webhookData,
+        amount: amount || payment.amount
       });
     }
 
-    // Отправляем ответ Финику (согласно их документации)
-    res.json({ 
+    // Отвечаем быстро (200 OK) - тяжелую работу делаем асинхронно
+    res.status(200).json({ 
       success: true, 
-      message: 'Callback processed',
-      paymentId: payment.paymentId 
+      message: 'Webhook processed',
+      transactionId: transactionId 
     });
   } catch (error) {
-    console.error('Callback error:', error);
-    res.status(500).json({ 
+    console.error('Webhook error:', error);
+    // Все равно отвечаем 200, чтобы Финик не повторял запрос
+    res.status(200).json({ 
       success: false, 
       error: error.message 
     });
   }
 });
+
+// Маппинг статусов Финика в наши статусы
+function mapFinikStatus(finikStatus) {
+  const statusMap = {
+    'SUCCEEDED': 'success',
+    'FAILED': 'failed',
+    'PENDING': 'pending',
+    'CANCELLED': 'cancelled'
+  };
+  return statusMap[finikStatus] || 'pending';
+}
 
 // GET endpoint для проверки статуса (если Финик использует GET для callbacks)
 router.get('/finik', async (req, res) => {

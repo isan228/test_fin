@@ -40,6 +40,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'API ключ полученный от Финика'
     },
+    accountId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'ID корпоративного аккаунта от Финика'
+    },
+    environment: {
+      type: DataTypes.STRING,
+      defaultValue: 'production',
+      comment: 'Окружение: production или beta'
+    },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW

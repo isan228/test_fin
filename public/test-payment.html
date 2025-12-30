@@ -59,17 +59,27 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="amount">Сумма платежа *</label>
+                        <label for="amount">Сумма платежа (сомы) *</label>
                         <input type="number" id="amount" name="amount" required min="0.01" step="0.01" placeholder="100.00">
+                        <small>Сумма в сомах (KGS)</small>
                     </div>
                     
                     <div class="form-group">
-                        <label for="currency">Валюта</label>
-                        <select id="currency" name="currency">
-                            <option value="RUB" selected>RUB (Российский рубль)</option>
-                            <option value="USD">USD (Доллар США)</option>
-                            <option value="EUR">EUR (Евро)</option>
-                        </select>
+                        <label for="redirectUrl">Redirect URL (URL после успешной оплаты) *</label>
+                        <input type="url" id="redirectUrl" name="redirectUrl" required value="http://2.56.179.126:3000/callback/finik" placeholder="https://example.com/success">
+                        <small>URL для редиректа после успешной оплаты</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="merchantCategoryCode">MCC код (Merchant Category Code) *</label>
+                        <input type="text" id="merchantCategoryCode" name="merchantCategoryCode" required value="0742" placeholder="0742">
+                        <small>Код категории мерчанта</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="name_en">Название QR кода (на английском) *</label>
+                        <input type="text" id="name_en" name="name_en" required placeholder="Test Payment" value="Test Payment">
+                        <small>Название, которое будет отображаться на QR коде</small>
                     </div>
                     
                     <div class="form-group">
@@ -145,8 +155,10 @@
             const formData = {
                 apiKeyId: parseInt(document.getElementById('apiKeySelect').value),
                 amount: parseFloat(document.getElementById('amount').value),
-                currency: document.getElementById('currency').value,
-                description: document.getElementById('paymentDescription').value
+                redirectUrl: document.getElementById('redirectUrl').value.trim(),
+                merchantCategoryCode: document.getElementById('merchantCategoryCode').value.trim(),
+                name_en: document.getElementById('name_en').value.trim(),
+                description: document.getElementById('paymentDescription').value.trim()
             };
 
             try {
@@ -170,13 +182,27 @@
                     
                     showAlert('Платеж создан успешно!', 'success');
                     
+                    // Если есть paymentUrl, показываем ссылку
+                    if (result.paymentUrl) {
+                        const urlDiv = document.createElement('div');
+                        urlDiv.style.marginTop = '15px';
+                        urlDiv.innerHTML = `
+                            <strong>Ссылка на оплату:</strong><br>
+                            <a href="${result.paymentUrl}" target="_blank" style="color: #4299e1; word-break: break-all;">${result.paymentUrl}</a>
+                            <button class="copy-btn" onclick="copyToClipboard('${result.paymentUrl}')" style="margin-left: 10px;">Копировать</button>
+                        `;
+                        resultDiv.appendChild(urlDiv);
+                    }
+                    
                     // Обновляем список платежей
                     loadPayments();
                     
                     // Очистка формы
                     setTimeout(() => {
                         document.getElementById('testPaymentForm').reset();
-                        document.getElementById('currency').value = 'RUB';
+                        document.getElementById('redirectUrl').value = 'http://2.56.179.126:3000/callback/finik';
+                        document.getElementById('merchantCategoryCode').value = '0742';
+                        document.getElementById('name_en').value = 'Test Payment';
                     }, 2000);
                 } else {
                     resultContent.textContent = 'Ошибка: ' + result.error;
@@ -247,6 +273,15 @@
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        // Копирование в буфер обмена
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('Скопировано в буфер обмена!', 'success');
+            }).catch(err => {
+                showAlert('Ошибка копирования: ' + err.message, 'error');
+            });
         }
 
         // Показать уведомление

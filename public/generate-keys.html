@@ -96,8 +96,29 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="callbackUrlInput">Callback URL *</label>
+                        <label for="callbackUrlInput">Webhook URL (Callback URL) *</label>
                         <input type="url" id="callbackUrlInput" name="callbackUrl" required value="http://2.56.179.126:3000/callback/finik">
+                        <small>URL для получения webhook от Финика о статусе платежа</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="finikApiKey">API ключ от Финика *</label>
+                        <input type="text" id="finikApiKey" name="finikApiKey" required placeholder="Получите от представителей Финика">
+                        <small>API ключ, полученный от представителей Финика</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="accountId">Account ID (ID корпоративного аккаунта) *</label>
+                        <input type="text" id="accountId" name="accountId" required placeholder="Получите от представителей Финика">
+                        <small>ID корпоративного аккаунта от Финика</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="environment">Окружение</label>
+                        <select id="environment" name="environment">
+                            <option value="production" selected>Production (Продакшн)</option>
+                            <option value="beta">Beta (Тестовое)</option>
+                        </select>
                     </div>
                     
                     <div class="form-group">
@@ -165,6 +186,9 @@
                 publicKey: document.getElementById('publicKeyInput').value.trim(),
                 privateKey: document.getElementById('privateKeyInput').value.trim(),
                 callbackUrl: document.getElementById('callbackUrlInput').value.trim(),
+                finikApiKey: document.getElementById('finikApiKey').value.trim(),
+                accountId: document.getElementById('accountId').value.trim(),
+                environment: document.getElementById('environment').value,
                 description: document.getElementById('description').value.trim()
             };
 
