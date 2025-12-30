@@ -53,6 +53,11 @@ app.get('/payment', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'payment.html'));
 });
 
+// Страница оплаты 1 сом
+app.get('/pay-1som', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'pay-1som.html'));
+});
+
 // Проверка подключения к БД и синхронизация
 sequelize.authenticate()
   .then(() => {

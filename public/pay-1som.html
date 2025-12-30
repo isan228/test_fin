@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата 1 сом - Финик</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        .payment-page {
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .qr-container {
+            margin: 30px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .amount-display {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        .instructions {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .success-message {
+            display: none;
+            padding: 30px;
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        .success-message.show {
+            display: block;
+        }
+        .loading {
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-page">
+            <h1>💳 Оплата 1 сом</h1>
+            
+            <div id="loading" class="loading">
+                <p>Создание платежа...</p>
+            </div>
+
+            <div id="paymentContent" style="display: none;">
+                <div class="amount-display">1 сом</div>
+                
+                <div class="qr-container">
+                    <h3>Отсканируйте QR код для оплаты</h3>
+                    <div id="qrcode"></div>
+                    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                        Используйте приложение Финик или любое финансовое приложение Кыргызстана
+                    </p>
+                </div>
+
+                <div class="instructions">
+                    <h4>Инструкция:</h4>
+                    <ol style="text-align: left; padding-left: 20px;">
+                        <li>Откройте приложение Финик или другое финансовое приложение</li>
+                        <li>Нажмите "Сканировать QR код"</li>
+                        <li>Наведите камеру на QR код выше</li>
+                        <li>Подтвердите оплату 1 сом</li>
+                    </ol>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <p><strong>ID платежа:</strong> <span id="paymentId"></span></p>
+                    <a href="#" id="paymentLink" target="_blank" style="color: #4299e1; word-break: break-all; font-size: 12px;">Открыть в браузере</a>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="checkStatus()">Проверить статус оплаты</button>
+                </div>
+            </div>
+
+            <div id="successMessage" class="success-message">
+                <h2 style="color: #28a745; margin-bottom: 15px;">✅ Оплата успешно завершена!</h2>
+                <p>Спасибо за оплату. Платеж на сумму <strong>1 сом</strong> успешно обработан.</p>
+                <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                    <strong>ID платежа:</strong> <span id="successPaymentId"></span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPaymentId = null;
+        let paymentUrl = null;
+        let statusCheckInterval = null;
+
+        // Проверяем, есть ли параметр success в URL (после редиректа от Финика)
+        const urlParams = new URLSearchParams(window.location.search);
+        const success = urlParams.get('success');
+        const paymentIdFromUrl = urlParams.get('paymentId');
+
+        if (success === 'true' || paymentIdFromUrl) {
+            // Показываем сообщение об успехе
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('paymentContent').style.display = 'none';
+            document.getElementById('successMessage').classList.add('show');
+            if (paymentIdFromUrl) {
+                document.getElementById('successPaymentId').textContent = paymentIdFromUrl;
+            }
+            // Проверяем статус в БД
+            if (paymentIdFromUrl) {
+                checkPaymentStatus(paymentIdFromUrl);
+            }
+        } else {
+            // Создаем новый платеж
+            createPayment();
+        }
+
+        async function createPayment() {
+            try {
+                const response = await fetch('/api/finik/payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: 1,
+                        redirectUrl: window.location.origin + '/pay-1som.html?success=true&paymentId=' + (currentPaymentId || ''),
+                        webhookUrl: window.location.origin + '/webhooks/finik',
+                        merchantCategoryCode: '0742',
+                        name_en: 'Test Payment 1 som'
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success && result.paymentUrl) {
+                    paymentUrl = result.paymentUrl;
+                    currentPaymentId = result.paymentId;
+                    
+                    // Обновляем redirectUrl с правильным paymentId
+                    if (result.paymentId) {
+                        const updatedRedirectUrl = window.location.origin + '/pay-1som.html?success=true&paymentId=' + result.paymentId;
+                        // Можно обновить платеж, но для простоты оставим как есть
+                    }
+
+                    displayPayment(result.paymentUrl, result.paymentId);
+                    
+                    // Начинаем проверку статуса каждые 5 секунд
+                    statusCheckInterval = setInterval(() => {
+                        checkPaymentStatus(result.paymentId);
+                    }, 5000);
+                } else {
+                    document.getElementById('loading').innerHTML = `
+                        <p style="color: red;">Ошибка создания платежа: ${result.error || 'Неизвестная ошибка'}</p>
+                        <button class="btn btn-primary" onclick="location.reload()" style="margin-top: 15px;">Попробовать снова</button>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: red;">Ошибка: ${error.message}</p>
+                    <button class="btn btn-primary" onclick="location.reload()" style="margin-top: 15px;">Попробовать снова</button>
+                `;
+            }
+        }
+
+        function displayPayment(url, id) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('paymentContent').style.display = 'block';
+            
+            currentPaymentId = id;
+            document.getElementById('paymentId').textContent = id;
+            document.getElementById('paymentLink').href = url;
+            document.getElementById('paymentLink').textContent = url;
+
+            // Генерируем QR код
+            QRCode.toCanvas(document.getElementById('qrcode'), url, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('Ошибка генерации QR кода:', error);
+                    document.getElementById('qrcode').innerHTML = '<p style="color: red;">Ошибка генерации QR кода</p>';
+                }
+            });
+        }
+
+        async function checkStatus() {
+            if (!currentPaymentId) return;
+            await checkPaymentStatus(currentPaymentId);
+        }
+
+        async function checkPaymentStatus(paymentId) {
+            try {
+                const response = await fetch(`/api/payments?paymentId=${paymentId}`);
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    const payment = result.data[0];
+                    
+                    if (payment.status === 'success') {
+                        // Останавливаем проверку
+                        if (statusCheckInterval) {
+                            clearInterval(statusCheckInterval);
+                        }
+                        
+                        // Показываем сообщение об успехе
+                        document.getElementById('paymentContent').style.display = 'none';
+                        document.getElementById('successMessage').classList.add('show');
+                        document.getElementById('successPaymentId').textContent = paymentId;
+                    } else if (payment.status === 'failed') {
+                        alert('Платеж не прошел. Попробуйте еще раз.');
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка проверки статуса:', error);
+            }
+        }
+
+        // Очистка при закрытии страницы
+        window.addEventListener('beforeunload', () => {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+        });
+    </script>
+</body>
+</html>
+

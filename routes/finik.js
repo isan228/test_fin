@@ -109,11 +109,18 @@ router.post('/payment', async (req, res) => {
     // Генерируем PaymentId (UUID v4)
     const paymentId = uuidv4();
 
+    // Если redirectUrl не содержит paymentId, добавляем его
+    let finalRedirectUrl = redirectUrl;
+    if (redirectUrl && !redirectUrl.includes('paymentId=')) {
+      const separator = redirectUrl.includes('?') ? '&' : '?';
+      finalRedirectUrl = `${redirectUrl}${separator}paymentId=${paymentId}`;
+    }
+
     // Создаем платеж через API Финика
     const result = await createPayment({
       amount: parseFloat(amount),
       paymentId: paymentId,
-      redirectUrl: redirectUrl,
+      redirectUrl: finalRedirectUrl,
       accountId: accountId,
       merchantCategoryCode: merchantCategoryCode,
       name_en: name_en,
