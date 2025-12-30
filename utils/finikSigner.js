@@ -124,25 +124,65 @@ function signRequest(requestData, privateKeyPem) {
     // Нормализация приватного ключа (на случай если пришел из .env с \n)
     let normalizedKey = privateKeyPem;
     if (typeof normalizedKey === 'string') {
-      normalizedKey = normalizedKey.replace(/\\n/g, '\n').trim();
+      // Заменяем \n на реальные переносы строк
+      normalizedKey = normalizedKey.replace(/\\n/g, '\n');
+      // Убираем пробелы в начале и конце, но сохраняем переносы строк внутри
+      normalizedKey = normalizedKey.trim();
+      
+      // Убеждаемся, что есть правильные переносы строк
+      // Если ключ в одной строке без переносов, это проблема
+      if (!normalizedKey.includes('\n') && normalizedKey.length > 100) {
+        throw new Error('Ключ должен содержать переносы строк. Используйте многострочный формат в .env или \\n в одной строке.');
+      }
     }
     
     // Строим каноническую строку
     const canonicalString = buildCanonicalString(requestData);
     
-    // Подписываем RSA-SHA256
-    const sign = crypto.createSign('RSA-SHA256');
-    sign.update(canonicalString, 'utf8');
-    sign.end();
-    
-    // Возвращаем Base64 подпись
-    const signature = sign.sign(normalizedKey, 'base64');
-    
-    return signature;
+    // Пробуем использовать ключ напрямую
+    try {
+      const sign = crypto.createSign('RSA-SHA256');
+      sign.update(canonicalString, 'utf8');
+      sign.end();
+      const signature = sign.sign(normalizedKey, 'base64');
+      return signature;
+    } catch (signError) {
+      // Если не получилось, пробуем через createPrivateKey
+      try {
+        const privateKey = crypto.createPrivateKey({
+          key: normalizedKey,
+          format: 'pem',
+          type: 'pkcs8' // или 'pkcs1' для RSA PRIVATE KEY
+        });
+        
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update(canonicalString, 'utf8');
+        sign.end();
+        const signature = sign.sign(privateKey, 'base64');
+        return signature;
+      } catch (keyError) {
+        // Пробуем с типом pkcs1 (для BEGIN RSA PRIVATE KEY)
+        try {
+          const privateKey = crypto.createPrivateKey({
+            key: normalizedKey,
+            format: 'pem',
+            type: 'pkcs1'
+          });
+          
+          const sign = crypto.createSign('RSA-SHA256');
+          sign.update(canonicalString, 'utf8');
+          sign.end();
+          const signature = sign.sign(privateKey, 'base64');
+          return signature;
+        } catch (finalError) {
+          throw new Error(`Ошибка декодирования ключа: ${finalError.message}. Проверьте формат ключа. Попробуйте: 1) Использовать реальные переносы строк в .env, 2) Убедиться что ключ начинается с -----BEGIN и заканчивается -----END`);
+        }
+      }
+    }
   } catch (error) {
     // Более детальная ошибка для отладки
     if (error.message.includes('DECODER')) {
-      throw new Error(`Ошибка декодирования приватного ключа: ${error.message}. Проверьте формат ключа в .env файле. Ключ должен быть в формате PEM.`);
+      throw new Error(`Ошибка декодирования приватного ключа: ${error.message}. Проверьте формат ключа в .env файле. Ключ должен быть в формате PEM с правильными переносами строк.`);
     }
     throw error;
   }

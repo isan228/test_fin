@@ -52,24 +52,86 @@ function checkPrivateKey() {
   // Попытка использовать ключ
   try {
     const testString = 'test';
-    const sign = crypto.createSign('RSA-SHA256');
-    sign.update(testString, 'utf8');
-    sign.end();
-    const signature = sign.sign(normalized, 'base64');
     
-    console.log('\n✅ Ключ успешно использован для подписи!');
-    console.log('Тестовая подпись (первые 20 символов):', signature.substring(0, 20) + '...');
-    return true;
+    // Пробуем напрямую
+    try {
+      const sign = crypto.createSign('RSA-SHA256');
+      sign.update(testString, 'utf8');
+      sign.end();
+      const signature = sign.sign(normalized, 'base64');
+      
+      console.log('\n✅ Ключ успешно использован для подписи!');
+      console.log('Тестовая подпись (первые 20 символов):', signature.substring(0, 20) + '...');
+      return true;
+    } catch (directError) {
+      // Пробуем через createPrivateKey
+      console.log('\nПопытка через createPrivateKey...');
+      
+      try {
+        // Сначала пробуем pkcs8 (для BEGIN PRIVATE KEY)
+        const privateKey = crypto.createPrivateKey({
+          key: normalized,
+          format: 'pem',
+          type: 'pkcs8'
+        });
+        
+        const sign = crypto.createSign('RSA-SHA256');
+        sign.update(testString, 'utf8');
+        sign.end();
+        const signature = sign.sign(privateKey, 'base64');
+        
+        console.log('\n✅ Ключ успешно использован для подписи (через createPrivateKey pkcs8)!');
+        console.log('Тестовая подпись (первые 20 символов):', signature.substring(0, 20) + '...');
+        return true;
+      } catch (pkcs8Error) {
+        // Пробуем pkcs1 (для BEGIN RSA PRIVATE KEY)
+        try {
+          const privateKey = crypto.createPrivateKey({
+            key: normalized,
+            format: 'pem',
+            type: 'pkcs1'
+          });
+          
+          const sign = crypto.createSign('RSA-SHA256');
+          sign.update(testString, 'utf8');
+          sign.end();
+          const signature = sign.sign(privateKey, 'base64');
+          
+          console.log('\n✅ Ключ успешно использован для подписи (через createPrivateKey pkcs1)!');
+          console.log('Тестовая подпись (первые 20 символов):', signature.substring(0, 20) + '...');
+          return true;
+        } catch (pkcs1Error) {
+          throw directError; // Выбрасываем оригинальную ошибку
+        }
+      }
+    }
   } catch (error) {
     console.error('\n❌ Ошибка при использовании ключа:');
     console.error('Тип ошибки:', error.name);
     console.error('Сообщение:', error.message);
     
+    // Проверяем формат ключа
+    console.log('\nАнализ ключа:');
+    const lines = normalized.split('\n');
+    console.log('Количество строк:', lines.length);
+    console.log('Первая строка:', lines[0]);
+    console.log('Последняя строка:', lines[lines.length - 1]);
+    
+    if (normalized.includes('BEGIN RSA PRIVATE KEY')) {
+      console.log('Тип ключа: RSA PRIVATE KEY (pkcs1)');
+    } else if (normalized.includes('BEGIN PRIVATE KEY')) {
+      console.log('Тип ключа: PRIVATE KEY (pkcs8)');
+    }
+    
     if (error.message.includes('DECODER')) {
       console.error('\n💡 Решение:');
-      console.error('1. Убедитесь, что ключ в .env файле использует реальные переносы строк');
-      console.error('2. Или используйте \\n в одной строке с кавычками');
+      console.error('1. Убедитесь, что ключ в .env файле использует РЕАЛЬНЫЕ переносы строк (Enter)');
+      console.error('2. Или используйте \\n в одной строке с кавычками: FINIK_PRIVATE_PEM="...\\n...\\n..."');
       console.error('3. Проверьте, что нет лишних пробелов в начале/конце');
+      console.error('4. Убедитесь, что ключ скопирован полностью (включая все строки между BEGIN и END)');
+      console.error('\nПопробуйте пересоздать ключ:');
+      console.error('  openssl genrsa -out finik_private.pem 2048');
+      console.error('Затем скопируйте ВСЁ содержимое файла в .env');
     }
     
     return false;
