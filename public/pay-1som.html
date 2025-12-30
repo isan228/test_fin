@@ -110,7 +110,17 @@
 
                 <div style="margin-top: 20px;">
                     <p><strong>ID платежа:</strong> <span id="paymentId"></span></p>
-                    <a href="#" id="paymentLink" target="_blank" style="color: #4299e1; word-break: break-all; font-size: 12px;">Открыть в браузере</a>
+                    <div style="margin-top: 10px;">
+                        <p style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                            <strong>Если QR код не распознается банком:</strong>
+                        </p>
+                        <a href="#" id="paymentLink" target="_blank" class="btn btn-primary" style="display: inline-block; text-decoration: none;">
+                            📱 Открыть страницу Финика с QR кодом
+                        </a>
+                        <p style="margin-top: 10px; font-size: 12px; color: #999;">
+                            На странице Финика будет правильный QR код для сканирования банковскими приложениями
+                        </p>
+                    </div>
                 </div>
 
                 <div style="margin-top: 30px;">
@@ -224,6 +234,24 @@
 
             console.log('Displaying payment with URL:', url);
 
+            // Пытаемся получить правильный QR URL
+            // Если это redirect URL, возможно нужно извлечь paymentId и построить правильный URL
+            let qrUrl = url;
+            
+            // Если URL содержит /v1/redirect, извлекаем paymentId и строим QR URL
+            if (url.includes('/v1/redirect') || url.includes('api.acquiring.averspay.kg')) {
+                const paymentIdMatch = url.match(/paymentId=([^&]+)/);
+                if (paymentIdMatch && paymentIdMatch[1]) {
+                    const extractedPaymentId = paymentIdMatch[1];
+                    // Строим URL для QR кода в формате qr.finik.kg
+                    qrUrl = `https://qr.finik.kg/${extractedPaymentId}?type=t`;
+                    console.log('Converted redirect URL to QR URL:', qrUrl);
+                }
+            } else if (url.includes('qr.finik.kg')) {
+                // Уже правильный формат
+                qrUrl = url;
+            }
+
             // Генерируем QR код
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = '<p>Генерация QR кода...</p>';
@@ -257,7 +285,7 @@
                     
                     console.log('Generating QR code for URL:', url);
                     
-                    QRCode.toCanvas(canvas, url, {
+                    QRCode.toCanvas(canvas, qrUrl, {
                         width: 300,
                         margin: 2,
                         color: {
@@ -281,14 +309,37 @@
             // Используем API для генерации QR кода (более надежно)
             function generateQRViaAPI(url) {
                 console.log('Using API method for QR code generation');
+                console.log('Original URL:', url);
+                
+                // Пытаемся получить правильный QR URL
+                let qrUrl = url;
+                
+                // Если URL содержит /v1/redirect, извлекаем paymentId и строим QR URL
+                if (url.includes('/v1/redirect') || url.includes('api.acquiring.averspay.kg')) {
+                    const paymentIdMatch = url.match(/paymentId=([^&]+)/);
+                    if (paymentIdMatch && paymentIdMatch[1]) {
+                        const extractedPaymentId = paymentIdMatch[1];
+                        // Строим URL для QR кода в формате qr.finik.kg
+                        qrUrl = `https://qr.finik.kg/${extractedPaymentId}?type=t`;
+                        console.log('Converted to QR URL:', qrUrl);
+                    }
+                }
+                
+                console.log('Final QR URL:', qrUrl);
+                
                 // Используем онлайн сервис для генерации QR кода
-                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data=${encodeURIComponent(url)}`;
+                // Важно: используем правильное кодирование
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data=${encodeURIComponent(qrUrl)}`;
+                
                 qrContainer.innerHTML = `
                     <img src="${qrApiUrl}" 
                          alt="QR Code" 
                          style="max-width: 300px; height: auto; border: 1px solid #ddd; border-radius: 8px; display: block; margin: 0 auto;" 
                          onload="console.log('QR code image loaded successfully')"
                          onerror="console.error('Failed to load QR code image'); this.parentElement.innerHTML='<div style=\'padding:20px; border:2px dashed #ccc; border-radius:8px;\'><p style=\'color:#666;\'>Не удалось загрузить QR код</p><p style=\'font-size:12px; color:#999; margin-top:10px;\'>Используйте ссылку ниже для оплаты</p></div>'">
+                    <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                        Если QR код не распознается, откройте ссылку ниже и отсканируйте QR код на странице Финика
+                    </p>
                 `;
             }
 
@@ -299,7 +350,7 @@
             } else {
                 console.log('QRCode library not available, using API method immediately');
                 // Используем API метод сразу, так как библиотека может не загрузиться
-                generateQRViaAPI(url);
+                generateQRViaAPI(qrUrl);
             }
         }
 

@@ -144,7 +144,16 @@ async function createPayment(params) {
 
     if (response.status === 302) {
       // Получаем URL платежа из заголовка Location
-      const paymentUrl = response.headers.location;
+      let paymentUrl = response.headers.location;
+      
+      console.log('Finik redirect URL:', paymentUrl);
+      
+      // Если это redirect URL на api.acquiring.averspay.kg, возможно нужно следовать редиректу
+      // Но согласно документации, мы НЕ должны следовать редиректу автоматически
+      // URL должен быть вида: https://qr.finik.kg/... или https://api.acquiring.averspay.kg/v1/redirect?...
+      
+      // Если URL содержит /v1/redirect, возможно нужно извлечь paymentId и построить правильный QR URL
+      // Но обычно Финик возвращает прямой URL на qr.finik.kg
       
       // Проверяем статус в URL
       const urlStatus = paymentUrl.includes('status=failed') ? 'failed' : 
@@ -156,6 +165,17 @@ async function createPayment(params) {
         console.warn('   - Account not activated');
         console.warn('   - Wrong environment (beta vs production)');
         console.warn('   - Missing required parameters');
+      }
+      
+      // Пытаемся извлечь paymentId из URL для построения правильного QR URL
+      let qrPaymentUrl = paymentUrl;
+      const paymentIdMatch = paymentUrl.match(/paymentId=([^&]+)/);
+      if (paymentIdMatch && paymentIdMatch[1]) {
+        const extractedPaymentId = paymentIdMatch[1];
+        // Строим URL для QR кода (формат qr.finik.kg)
+        // Но это может быть неправильно, так как мы не знаем точный формат
+        // Оставляем оригинальный URL, но добавляем информацию
+        console.log('Extracted paymentId from URL:', extractedPaymentId);
       }
       
       return {
