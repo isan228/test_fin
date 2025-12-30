@@ -16,8 +16,19 @@ function checkPrivateKey() {
   
   console.log('✅ FINIK_PRIVATE_PEM найден');
   console.log('Длина ключа:', privateKeyPem.length, 'символов');
+  
+  if (privateKeyPem.length < 100) {
+    console.warn('\n⚠️  ВНИМАНИЕ: Ключ слишком короткий!');
+    console.warn('Полный ключ должен быть около 1700-1800 символов.');
+    console.warn('Похоже, что в .env указана только первая строка ключа.');
+    console.warn('\nРешение:');
+    console.warn('1. Откройте файл finik_private.pem (или сгенерируйте новый)');
+    console.warn('2. Скопируйте ВСЁ содержимое файла (включая BEGIN и END)');
+    console.warn('3. Вставьте в .env с кавычками и реальными переносами строк');
+  }
+  
   console.log('\nПервые 50 символов:', privateKeyPem.substring(0, 50));
-  console.log('Последние 50 символов:', privateKeyPem.substring(privateKeyPem.length - 50));
+  console.log('Последние 50 символов:', privateKeyPem.substring(Math.max(0, privateKeyPem.length - 50)));
   
   // Нормализация
   const normalized = privateKeyPem.replace(/\\n/g, '\n').trim();
