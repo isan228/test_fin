@@ -170,7 +170,7 @@
                     },
                     body: JSON.stringify({
                         amount: 1,
-                        redirectUrl: window.location.origin + '/pay-1som.html?success=true&paymentId=' + (currentPaymentId || ''),
+                        redirectUrl: window.location.origin + '/pay-1som.html?success=true',
                         webhookUrl: window.location.origin + '/webhooks/finik',
                         merchantCategoryCode: '0742',
                         name_en: 'Test Payment 1 som'
@@ -187,6 +187,9 @@
                         paymentId: result.paymentId,
                         paymentUrl: result.paymentUrl
                     });
+
+                    // Обновляем redirectUrl с правильным paymentId для будущих редиректов
+                    // Но это не критично, так как paymentId будет в webhook
 
                     // Используем paymentUrl напрямую для QR кода
                     // Финик возвращает URL вида: https://qr.finik.kg/... или https://api.acquiring.averspay.kg/v1/redirect?...
@@ -275,40 +278,28 @@
                 }
             }
             
-            // Альтернативный способ через API или изображение
+            // Используем API для генерации QR кода (более надежно)
             function generateQRViaAPI(url) {
                 console.log('Using API method for QR code generation');
                 // Используем онлайн сервис для генерации QR кода
-                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data=${encodeURIComponent(url)}`;
                 qrContainer.innerHTML = `
-                    <img src="${qrApiUrl}" alt="QR Code" style="max-width: 300px; height: auto; border: 1px solid #ddd; border-radius: 8px;" 
-                         onerror="this.parentElement.innerHTML='<p style=\'color:#666;\'>Не удалось загрузить QR код. Используйте ссылку ниже.</p>'">
+                    <img src="${qrApiUrl}" 
+                         alt="QR Code" 
+                         style="max-width: 300px; height: auto; border: 1px solid #ddd; border-radius: 8px; display: block; margin: 0 auto;" 
+                         onload="console.log('QR code image loaded successfully')"
+                         onerror="console.error('Failed to load QR code image'); this.parentElement.innerHTML='<div style=\'padding:20px; border:2px dashed #ccc; border-radius:8px;\'><p style=\'color:#666;\'>Не удалось загрузить QR код</p><p style=\'font-size:12px; color:#999; margin-top:10px;\'>Используйте ссылку ниже для оплаты</p></div>'">
                 `;
             }
 
-            // Пробуем сгенерировать сразу, если библиотека загружена
+            // Сначала пробуем загрузить библиотеку QRCode
             if (typeof QRCode !== 'undefined') {
                 console.log('QRCode library is loaded, generating QR...');
                 generateQR();
             } else {
-                console.log('Waiting for QRCode library to load...');
-                // Ждем загрузки библиотеки
-                const checkInterval = setInterval(() => {
-                    if (typeof QRCode !== 'undefined') {
-                        clearInterval(checkInterval);
-                        console.log('QRCode library loaded, generating QR...');
-                        generateQR();
-                    }
-                }, 100);
-                
-                // Таймаут на случай если библиотека не загрузится
-                setTimeout(() => {
-                    clearInterval(checkInterval);
-                    if (qrContainer.innerHTML.includes('Генерация')) {
-                        console.warn('QRCode library timeout, using API method');
-                        generateQRViaAPI(url);
-                    }
-                }, 3000);
+                console.log('QRCode library not available, using API method immediately');
+                // Используем API метод сразу, так как библиотека может не загрузиться
+                generateQRViaAPI(url);
             }
         }
 

@@ -134,6 +134,25 @@ router.post('/payment', async (req, res) => {
     });
 
     if (result.success) {
+      // Сохраняем платеж в БД
+      try {
+        await Payment.create({
+          paymentId: result.paymentId,
+          amount: parseFloat(amount),
+          currency: 'KGS',
+          status: 'pending',
+          callbackData: {
+            paymentUrl: result.paymentUrl,
+            finikResponse: result,
+            accountId: accountId
+          }
+        });
+        console.log('Payment saved to database:', result.paymentId);
+      } catch (dbError) {
+        console.error('Error saving payment to database:', dbError);
+        // Не прерываем процесс, просто логируем ошибку
+      }
+
       // Возвращаем paymentUrl для фронтенда
       const response = {
         success: true,
