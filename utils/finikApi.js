@@ -114,6 +114,16 @@ async function createPayment(params) {
 
   // Отправляем запрос
   try {
+    // Логируем запрос для отладки (без чувствительных данных)
+    console.log('Creating payment:', {
+      amount,
+      paymentId: body.PaymentId,
+      accountId,
+      environment,
+      baseUrl,
+      hasSignature: !!signature
+    });
+
     const response = await axios.post(`${baseUrl}${path}`, body, {
       headers: {
         'content-type': 'application/json',
@@ -125,14 +135,36 @@ async function createPayment(params) {
       validateStatus: (status) => [201, 302].includes(status) || status >= 400
     });
 
+    console.log('Finik API response:', {
+      status: response.status,
+      statusText: response.statusText,
+      location: response.headers.location,
+      data: response.data
+    });
+
     if (response.status === 302) {
       // Получаем URL платежа из заголовка Location
       const paymentUrl = response.headers.location;
+      
+      // Проверяем статус в URL
+      const urlStatus = paymentUrl.includes('status=failed') ? 'failed' : 
+                       paymentUrl.includes('status=success') ? 'success' : 'unknown';
+      
+      if (urlStatus === 'failed') {
+        console.warn('⚠️  Payment created but status=failed in URL. Possible reasons:');
+        console.warn('   - Invalid accountId or API key');
+        console.warn('   - Account not activated');
+        console.warn('   - Wrong environment (beta vs production)');
+        console.warn('   - Missing required parameters');
+      }
+      
       return {
         success: true,
         paymentUrl: paymentUrl,
         paymentId: body.PaymentId,
-        status: 'created'
+        status: 'created',
+        urlStatus: urlStatus,
+        warning: urlStatus === 'failed' ? 'Payment URL contains status=failed. Check your credentials and account settings with Finik.' : undefined
       };
     } else if (response.status === 201) {
       return {
@@ -142,10 +174,18 @@ async function createPayment(params) {
         status: 'created'
       };
     } else {
+      const errorMessage = response.data?.ErrorMessage || response.data?.message || `HTTP ${response.status}`;
+      console.error('Finik API error:', {
+        status: response.status,
+        error: errorMessage,
+        data: response.data
+      });
+      
       return {
         success: false,
-        error: response.data?.ErrorMessage || `HTTP ${response.status}`,
-        statusCode: response.status
+        error: errorMessage,
+        statusCode: response.status,
+        details: response.data
       };
     }
   } catch (error) {
