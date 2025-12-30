@@ -22,7 +22,15 @@ app.use(express.static(path.join(__dirname, 'public')));
 // API Routes
 app.use('/api', apiRoutes);
 
-// Callback Routes
+// Finik API Routes (новые endpoints согласно требованиям)
+const finikRoutes = require('./routes/finik');
+app.use('/api/finik', finikRoutes);
+
+// Webhook Routes (новые endpoints согласно требованиям)
+const webhookRoutes = require('./routes/webhooks');
+app.use('/webhooks', webhookRoutes);
+
+// Callback Routes (старые для обратной совместимости)
 app.use('/callback', callbackRoutes);
 
 // Главная страница
@@ -55,7 +63,9 @@ sequelize.authenticate()
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Сервер запущен на http://${process.env.SERVER_IP || 'localhost'}:${PORT}`);
       console.log(`📝 API доступно по адресу: http://${process.env.SERVER_IP || 'localhost'}:${PORT}/api`);
-      console.log(`🔔 Callback endpoint: http://${process.env.SERVER_IP || 'localhost'}:${PORT}/callback/finik`);
+      console.log(`💳 Finik Payment API: POST http://${process.env.SERVER_IP || 'localhost'}:${PORT}/api/finik/payment`);
+      console.log(`🔔 Webhook endpoint: POST http://${process.env.SERVER_IP || 'localhost'}:${PORT}/webhooks/finik`);
+      console.log(`🔔 Callback endpoint (legacy): http://${process.env.SERVER_IP || 'localhost'}:${PORT}/callback/finik`);
     });
   })
   .catch(err => {

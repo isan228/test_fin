@@ -1,6 +1,6 @@
-const { Signer, RequestData } = require('@mancho.devs/authorizer');
 const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
+const { signRequest, verifySignature } = require('./finikSigner');
 
 // Публичные ключи Финика для проверки подписей
 const FINIK_PUBLIC_KEYS = {
@@ -32,6 +32,7 @@ const FINIK_API_URLS = {
 
 /**
  * Создает платеж в системе Финика
+ * 
  * @param {Object} params - Параметры платежа
  * @param {Number} params.amount - Сумма платежа
  * @param {String} params.paymentId - Уникальный ID платежа (UUID)
@@ -96,7 +97,7 @@ async function createPayment(params) {
   }
 
   // Формируем данные для подписи
-  const requestData = new RequestData({
+  const requestData = {
     httpMethod: 'POST',
     path: path,
     headers: {
@@ -106,11 +107,10 @@ async function createPayment(params) {
     },
     queryStringParameters: undefined,
     body: body
-  });
+  };
 
   // Генерируем подпись
-  const signer = new Signer(requestData);
-  const signature = await signer.sign(privateKey);
+  const signature = signRequest(requestData, privateKey);
 
   // Отправляем запрос
   try {
@@ -121,7 +121,7 @@ async function createPayment(params) {
         'x-api-timestamp': timestamp,
         signature: signature
       },
-      maxRedirects: 0, // Не следовать редиректу автоматически
+      maxRedirects: 0, // НЕ следовать редиректу автоматически
       validateStatus: (status) => [201, 302].includes(status) || status >= 400
     });
 
@@ -165,6 +165,7 @@ async function createPayment(params) {
 
 /**
  * Проверяет подпись входящего webhook от Финика
+ * 
  * @param {Object} req - Express request объект
  * @param {String} environment - Окружение: 'production' или 'beta'
  * @returns {Boolean} true если подпись валидна
@@ -176,12 +177,9 @@ function verifyWebhookSignature(req, environment = 'production') {
     const timestamp = req.headers['x-api-timestamp'];
 
     if (!signature || !timestamp) {
+      console.error('Missing signature or timestamp in webhook');
       return false;
     }
-
-    // Формируем каноническую строку для проверки
-    const baseUrl = FINIK_API_URLS[environment] || FINIK_API_URLS.production;
-    const host = new URL(baseUrl).host;
 
     // Получаем путь из URL (без query string)
     const url = new URL(req.originalUrl || req.url, `http://${req.headers.host}`);
@@ -189,7 +187,7 @@ function verifyWebhookSignature(req, environment = 'production') {
 
     // Собираем заголовки для подписи
     const signatureHeaders = {
-      Host: req.headers.host || host
+      Host: req.headers.host
     };
     
     // Добавляем все x-api-* заголовки
@@ -199,17 +197,17 @@ function verifyWebhookSignature(req, environment = 'production') {
       }
     });
 
-    const requestData = new RequestData({
+    // Формируем данные для проверки подписи
+    const requestData = {
       httpMethod: req.method,
       path: path,
       headers: signatureHeaders,
-      queryStringParameters: Object.keys(req.query).length > 0 ? req.query : undefined,
-      body: req.body
-    });
+      queryStringParameters: Object.keys(req.query || {}).length > 0 ? req.query : undefined,
+      body: req.body || {}
+    };
 
     // Проверяем подпись
-    const signer = new Signer(requestData);
-    return signer.verify(publicKey, signature);
+    return verifySignature(requestData, signature, publicKey);
   } catch (error) {
     console.error('Ошибка проверки подписи:', error);
     return false;
@@ -222,4 +220,3 @@ module.exports = {
   FINIK_PUBLIC_KEYS,
   FINIK_API_URLS
 };
-
