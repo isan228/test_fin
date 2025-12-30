@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callback - Финик</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .callback-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .callback-data {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="callback-container">
+            <h1>🔔 Callback от Финика</h1>
+            <p>Эта страница обрабатывает ответы от системы оплаты Финик</p>
+            
+            <div id="callbackInfo" class="callback-data">
+                <p>Ожидание данных callback...</p>
+            </div>
+            
+            <div id="statusInfo"></div>
+        </div>
+    </div>
+
+    <script>
+        // Парсим данные из URL (если они переданы через GET)
+        const urlParams = new URLSearchParams(window.location.search);
+        const callbackData = {};
+        
+        urlParams.forEach((value, key) => {
+            callbackData[key] = value;
+        });
+
+        // Если есть данные, отображаем их
+        if (Object.keys(callbackData).length > 0) {
+            document.getElementById('callbackInfo').innerHTML = 
+                '<pre>' + JSON.stringify(callbackData, null, 2) + '</pre>';
+        }
+
+        // Информация о callback endpoint
+        document.getElementById('statusInfo').innerHTML = `
+            <div style="margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 8px;">
+                <h3>Информация о Callback</h3>
+                <p><strong>POST Endpoint:</strong> <code>http://2.56.179.126:3000/callback/finik</code></p>
+                <p><strong>GET Endpoint:</strong> <code>http://2.56.179.126:3000/callback/finik?paymentId=xxx</code></p>
+                <p style="margin-top: 10px; color: #666;">
+                    Финик будет отправлять данные на этот endpoint после обработки платежа.
+                </p>
+            </div>
+        `;
+    </script>
+</body>
+</html>
+

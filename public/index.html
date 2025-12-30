@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Финик - Управление API ключами</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔑 Управление API ключами Финик</h1>
+            <p class="subtitle">Создание и управление ключами для системы оплаты</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Форма создания нового ключа -->
+            <section class="card">
+                <h2>Создать новый API ключ</h2>
+                <form id="createKeyForm">
+                    <div class="form-group">
+                        <label for="keyName">Название ключа *</label>
+                        <input type="text" id="keyName" name="name" required placeholder="Например: Основной ключ">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="publicKey">Открытый ключ (Public Key) *</label>
+                        <textarea id="publicKey" name="publicKey" rows="4" required placeholder="Вставьте открытый ключ"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="privateKey">Закрытый ключ (Private Key) *</label>
+                        <textarea id="privateKey" name="privateKey" rows="4" required placeholder="Вставьте закрытый ключ"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Описание</label>
+                        <textarea id="description" name="description" rows="2" placeholder="Дополнительная информация о ключе"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Создать ключ</button>
+                </form>
+            </section>
+
+            <!-- Список существующих ключей -->
+            <section class="card">
+                <h2>Существующие API ключи</h2>
+                <div id="keysList" class="keys-list">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </section>
+
+            <!-- Список платежей -->
+            <section class="card">
+                <h2>История платежей</h2>
+                <div id="paymentsList" class="payments-list">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </section>
+        </div>
+
+        <footer>
+            <p>Сервер: <strong>2.56.179.126</strong> | Callback URL: <code>/callback/finik</code></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
