@@ -195,8 +195,38 @@
                     
                     console.log('Payment created:', {
                         paymentId: result.paymentId,
-                        paymentUrl: result.paymentUrl
+                        paymentUrl: result.paymentUrl,
+                        warning: result.warning
                     });
+
+                    // Проверяем, есть ли предупреждение о статусе failed
+                    if (result.warning || (result.paymentUrl && result.paymentUrl.includes('status=failed'))) {
+                        // Показываем предупреждение после загрузки страницы
+                        setTimeout(() => {
+                            const warningDiv = document.createElement('div');
+                            warningDiv.style.cssText = 'background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin: 20px 0; color: #856404;';
+                            warningDiv.innerHTML = `
+                                <h4 style="margin-top: 0; color: #856404;">⚠️ Внимание: Платеж создан со статусом "failed"</h4>
+                                <p><strong>Возможные причины:</strong></p>
+                                <ul style="text-align: left; margin: 10px 0;">
+                                    <li>Неправильный AccountId или API Key</li>
+                                    <li>Аккаунт не активирован в системе Финика</li>
+                                    <li>Неправильное окружение (beta vs production)</li>
+                                    <li>Отсутствуют обязательные параметры</li>
+                                </ul>
+                                <p style="margin-bottom: 0;"><strong>Что делать:</strong></p>
+                                <ul style="text-align: left; margin: 10px 0;">
+                                    <li>Проверьте переменные окружения на сервере (.env файл)</li>
+                                    <li>Убедитесь, что AccountId и API Key правильные</li>
+                                    <li>Свяжитесь с поддержкой Финика для активации аккаунта</li>
+                                </ul>
+                            `;
+                            const paymentContent = document.getElementById('paymentContent');
+                            if (paymentContent) {
+                                paymentContent.insertBefore(warningDiv, paymentContent.firstChild);
+                            }
+                        }, 100);
+                    }
 
                     // Обновляем redirectUrl с правильным paymentId для будущих редиректов
                     // Но это не критично, так как paymentId будет в webhook
