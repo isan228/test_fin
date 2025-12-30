@@ -115,14 +115,17 @@ async function createPayment(params) {
   // Отправляем запрос
   try {
     // Логируем запрос для отладки (без чувствительных данных)
-    console.log('Creating payment:', {
-      amount,
-      paymentId: body.PaymentId,
-      accountId,
-      environment,
-      baseUrl,
-      hasSignature: !!signature
-    });
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📤 Создание платежа в Финике:');
+    console.log('   Amount:', amount);
+    console.log('   PaymentId:', body.PaymentId);
+    console.log('   AccountId:', accountId);
+    console.log('   Environment:', environment);
+    console.log('   Base URL:', baseUrl);
+    console.log('   API Key (первые 10 символов):', apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН');
+    console.log('   Signature:', signature ? signature.substring(0, 20) + '...' : 'НЕ СГЕНЕРИРОВАНА');
+    console.log('   Request Body:', JSON.stringify(body, null, 2));
+    console.log('═══════════════════════════════════════════════════════');
 
     const response = await axios.post(`${baseUrl}${path}`, body, {
       headers: {
@@ -135,36 +138,54 @@ async function createPayment(params) {
       validateStatus: (status) => [201, 302].includes(status) || status >= 400
     });
 
-    console.log('Finik API response:', {
-      status: response.status,
-      statusText: response.statusText,
-      location: response.headers.location,
-      data: response.data
-    });
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📥 Ответ от Финика:');
+    console.log('   Status:', response.status);
+    console.log('   Status Text:', response.statusText);
+    console.log('   Location:', response.headers.location);
+    console.log('   Response Data:', JSON.stringify(response.data, null, 2));
+    console.log('   Response Headers:', JSON.stringify(response.headers, null, 2));
+    console.log('═══════════════════════════════════════════════════════');
 
     if (response.status === 302) {
       // Получаем URL платежа из заголовка Location
       let paymentUrl = response.headers.location;
       
-      console.log('Finik redirect URL:', paymentUrl);
-      
-      // Если это redirect URL на api.acquiring.averspay.kg, возможно нужно следовать редиректу
-      // Но согласно документации, мы НЕ должны следовать редиректу автоматически
-      // URL должен быть вида: https://qr.finik.kg/... или https://api.acquiring.averspay.kg/v1/redirect?...
-      
-      // Если URL содержит /v1/redirect, возможно нужно извлечь paymentId и построить правильный QR URL
-      // Но обычно Финик возвращает прямой URL на qr.finik.kg
+      console.log('🔗 Finik redirect URL:', paymentUrl);
       
       // Проверяем статус в URL
       const urlStatus = paymentUrl.includes('status=failed') ? 'failed' : 
                        paymentUrl.includes('status=success') ? 'success' : 'unknown';
       
       if (urlStatus === 'failed') {
-        console.warn('⚠️  Payment created but status=failed in URL. Possible reasons:');
-        console.warn('   - Invalid accountId or API key');
-        console.warn('   - Account not activated');
-        console.warn('   - Wrong environment (beta vs production)');
-        console.warn('   - Missing required parameters');
+        console.error('❌ ⚠️  ⚠️  ⚠️  ПЛАТЕЖ СОЗДАН СО СТАТУСОМ FAILED ⚠️  ⚠️  ⚠️');
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('Возможные причины:');
+        console.error('   1. ❌ Неправильный AccountId:', accountId);
+        console.error('   2. ❌ Неправильный API Key (первые 10 символов):', apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН');
+        console.error('   3. ❌ Неправильное окружение:', environment, '(должно быть production или beta)');
+        console.error('   4. ❌ Аккаунт не активирован в системе Финика');
+        console.error('   5. ❌ Проблема с подписью запроса');
+        console.error('   6. ❌ Неправильный формат данных в запросе');
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('Отправленные данные:');
+        console.error('   AccountId:', accountId);
+        console.error('   MerchantCategoryCode:', merchantCategoryCode);
+        console.error('   Name (en):', name_en);
+        console.error('   WebhookUrl:', webhookUrl);
+        console.error('   RedirectUrl:', redirectUrl);
+        console.error('   Amount:', amount);
+        console.error('═══════════════════════════════════════════════════════');
+        console.error('💡 Рекомендации:');
+        console.error('   1. Проверьте правильность AccountId и API Key в .env');
+        console.error('   2. Убедитесь, что аккаунт активирован в системе Финика');
+        console.error('   3. Проверьте, что используете правильное окружение (production/beta)');
+        console.error('   4. Свяжитесь с поддержкой Финика для проверки аккаунта');
+        console.error('═══════════════════════════════════════════════════════');
+      } else if (urlStatus === 'success') {
+        console.log('✅ Платеж успешно создан!');
+      } else {
+        console.log('⚠️  Статус в URL неизвестен');
       }
       
       // Пытаемся извлечь paymentId из URL для построения правильного QR URL
