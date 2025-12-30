@@ -48,6 +48,11 @@ app.get('/test-payment', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'test-payment.html'));
 });
 
+// Страница оплаты с QR кодом
+app.get('/payment', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'payment.html'));
+});
+
 // Проверка подключения к БД и синхронизация
 sequelize.authenticate()
   .then(() => {

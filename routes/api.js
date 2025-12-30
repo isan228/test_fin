@@ -98,7 +98,15 @@ router.delete('/keys/:id', async (req, res) => {
 // Получить все платежи
 router.get('/payments', async (req, res) => {
   try {
+    const { paymentId } = req.query;
+    
+    let where = {};
+    if (paymentId) {
+      where.paymentId = paymentId;
+    }
+    
     const payments = await Payment.findAll({
+      where: where,
       include: [{
         model: ApiKey,
         as: 'apiKey',

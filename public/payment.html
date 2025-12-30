@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата - Финик</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        .payment-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+        .qr-code {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+        .payment-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e7f3ff;
+            border-radius: 8px;
+            text-align: left;
+        }
+        .payment-link {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            word-break: break-all;
+        }
+        .payment-link a {
+            color: #4299e1;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .payment-link a:hover {
+            text-decoration: underline;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="payment-container">
+            <h1>💳 Оплата через Финик</h1>
+            
+            <div id="loading" class="loading">
+                <p>Загрузка данных платежа...</p>
+            </div>
+
+            <div id="paymentContent" style="display: none;">
+                <!-- QR код -->
+                <div class="qr-code">
+                    <h3>Отсканируйте QR код для оплаты</h3>
+                    <div id="qrcode"></div>
+                    <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                        Используйте приложение Финик для сканирования QR кода
+                    </p>
+                </div>
+
+                <!-- Информация о платеже -->
+                <div class="payment-info">
+                    <h3>Информация о платеже</h3>
+                    <p><strong>ID платежа:</strong> <span id="paymentId"></span></p>
+                    <p><strong>Сумма:</strong> <span id="amount"></span> сом</p>
+                    <p><strong>Статус:</strong> <span id="status"></span></p>
+                </div>
+
+                <!-- Ссылка на оплату -->
+                <div class="payment-link">
+                    <p><strong>Или перейдите по ссылке:</strong></p>
+                    <a href="#" id="paymentUrl" target="_blank">Открыть страницу оплаты</a>
+                    <button class="copy-btn" onclick="copyPaymentUrl()" style="margin-left: 10px;">Копировать ссылку</button>
+                </div>
+
+                <!-- Кнопка обновления статуса -->
+                <button class="btn btn-primary" onclick="checkPaymentStatus()" style="margin-top: 20px;">
+                    Обновить статус
+                </button>
+            </div>
+
+            <div id="error" style="display: none;" class="alert alert-error">
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Получаем paymentId из URL параметров
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('paymentId');
+        const paymentUrl = urlParams.get('paymentUrl');
+
+        if (!paymentId && !paymentUrl) {
+            document.getElementById('loading').innerHTML = '<p style="color: red;">Ошибка: не указан paymentId или paymentUrl</p>';
+        } else {
+            if (paymentUrl) {
+                // Если есть paymentUrl, сразу показываем QR код
+                displayPayment(paymentUrl, paymentId);
+            } else if (paymentId) {
+                // Если только paymentId, пытаемся получить информацию о платеже
+                loadPaymentInfo(paymentId);
+            }
+        }
+
+        function displayPayment(url, id) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('paymentContent').style.display = 'block';
+
+            // Генерируем QR код
+            QRCode.toCanvas(document.getElementById('qrcode'), url, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            }, function (error) {
+                if (error) {
+                    console.error('Ошибка генерации QR кода:', error);
+                    document.getElementById('qrcode').innerHTML = '<p style="color: red;">Ошибка генерации QR кода</p>';
+                }
+            });
+
+            // Устанавливаем данные
+            if (id) {
+                document.getElementById('paymentId').textContent = id;
+            }
+            document.getElementById('paymentUrl').href = url;
+            document.getElementById('paymentUrl').textContent = url;
+
+            // Проверяем статус в URL
+            if (url.includes('status=failed')) {
+                document.getElementById('status').innerHTML = '<span class="status-badge status-failed">Ошибка</span>';
+            } else if (url.includes('status=success')) {
+                document.getElementById('status').innerHTML = '<span class="status-badge status-success">Успешно</span>';
+            } else {
+                document.getElementById('status').innerHTML = '<span class="status-badge status-pending">Ожидает оплаты</span>';
+            }
+        }
+
+        async function loadPaymentInfo(paymentId) {
+            try {
+                const response = await fetch(`/api/payments?paymentId=${paymentId}`);
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    const payment = result.data[0];
+                    // Здесь можно получить paymentUrl из callbackData
+                    if (payment.callbackData && payment.callbackData.paymentUrl) {
+                        displayPayment(payment.callbackData.paymentUrl, paymentId);
+                    } else {
+                        document.getElementById('loading').innerHTML = '<p>Платеж найден, но URL оплаты недоступен</p>';
+                    }
+                } else {
+                    document.getElementById('loading').innerHTML = '<p>Платеж не найден</p>';
+                }
+            } catch (error) {
+                document.getElementById('loading').innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+            }
+        }
+
+        function copyPaymentUrl() {
+            const url = document.getElementById('paymentUrl').href;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Ссылка скопирована в буфер обмена!');
+            }).catch(err => {
+                console.error('Ошибка копирования:', err);
+            });
+        }
+
+        async function checkPaymentStatus() {
+            if (!paymentId) return;
+            
+            try {
+                const response = await fetch(`/api/payments?paymentId=${paymentId}`);
+                const result = await response.json();
+                
+                if (result.success && result.data && result.data.length > 0) {
+                    const payment = result.data[0];
+                    const statusMap = {
+                        'pending': 'Ожидает оплаты',
+                        'success': 'Успешно оплачен',
+                        'failed': 'Ошибка оплаты',
+                        'cancelled': 'Отменен'
+                    };
+                    
+                    document.getElementById('status').innerHTML = 
+                        `<span class="status-badge status-${payment.status}">${statusMap[payment.status] || payment.status}</span>`;
+                    
+                    if (payment.status === 'success') {
+                        alert('Платеж успешно оплачен!');
+                    }
+                }
+            } catch (error) {
+                console.error('Ошибка проверки статуса:', error);
+            }
+        }
+    </script>
+</body>
+</html>
+

@@ -128,11 +128,23 @@ router.post('/payment', async (req, res) => {
 
     if (result.success) {
       // Возвращаем paymentUrl для фронтенда
-      res.status(200).json({
+      const response = {
         success: true,
         paymentUrl: result.paymentUrl,
         paymentId: result.paymentId
-      });
+      };
+      
+      // Добавляем предупреждение если есть
+      if (result.warning) {
+        response.warning = result.warning;
+      }
+      
+      // Если запрос с параметром redirect=true, перенаправляем на страницу оплаты
+      if (req.query.redirect === 'true') {
+        return res.redirect(`/payment.html?paymentUrl=${encodeURIComponent(result.paymentUrl)}&paymentId=${result.paymentId}`);
+      }
+      
+      res.status(200).json(response);
     } else {
       res.status(result.statusCode || 400).json({
         success: false,

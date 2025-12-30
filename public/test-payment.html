@@ -238,7 +238,7 @@
                     
                     showAlert('Платеж создан успешно!', 'success');
                     
-                    // Если есть paymentUrl, показываем ссылку
+                    // Если есть paymentUrl, показываем ссылку и QR код
                     if (result.paymentUrl) {
                         const urlDiv = document.createElement('div');
                         urlDiv.style.marginTop = '15px';
@@ -246,6 +246,13 @@
                             <strong>Ссылка на оплату:</strong><br>
                             <a href="${result.paymentUrl}" target="_blank" style="color: #4299e1; word-break: break-all;">${result.paymentUrl}</a>
                             <button class="copy-btn" onclick="copyToClipboard('${result.paymentUrl}')" style="margin-left: 10px;">Копировать</button>
+                            <br><br>
+                            <a href="/payment.html?paymentUrl=${encodeURIComponent(result.paymentUrl)}&paymentId=${result.paymentId}" 
+                               target="_blank" 
+                               class="btn btn-primary" 
+                               style="display: inline-block; margin-top: 10px;">
+                                📱 Показать QR код для оплаты
+                            </a>
                         `;
                         resultDiv.appendChild(urlDiv);
                     }
