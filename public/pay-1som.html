@@ -6,6 +6,26 @@
     <title>Оплата 1 сом - Финик</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        // Проверка загрузки библиотеки QRCode
+        window.addEventListener('load', function() {
+            if (typeof QRCode === 'undefined') {
+                console.error('QRCode library failed to load');
+                // Пробуем альтернативный CDN
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
+                script.onload = function() {
+                    console.log('QRCode library loaded from alternative CDN');
+                };
+                script.onerror = function() {
+                    console.error('Failed to load QRCode from alternative CDN');
+                };
+                document.head.appendChild(script);
+            } else {
+                console.log('QRCode library loaded successfully');
+            }
+        });
+    </script>
     <style>
         .payment-page {
             max-width: 500px;
@@ -193,19 +213,81 @@
             document.getElementById('paymentLink').textContent = url;
 
             // Генерируем QR код
-            QRCode.toCanvas(document.getElementById('qrcode'), url, {
-                width: 300,
-                margin: 2,
-                color: {
-                    dark: '#000000',
-                    light: '#FFFFFF'
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '<p>Генерация QR кода...</p>';
+            
+            // Функция для генерации QR кода
+            function generateQR() {
+                if (typeof QRCode === 'undefined') {
+                    console.error('QRCode library not loaded, retrying...');
+                    setTimeout(generateQR, 500);
+                    return;
                 }
-            }, function (error) {
-                if (error) {
-                    console.error('Ошибка генерации QR кода:', error);
-                    document.getElementById('qrcode').innerHTML = '<p style="color: red;">Ошибка генерации QR кода</p>';
+
+                try {
+                    // Очищаем контейнер
+                    qrContainer.innerHTML = '';
+                    
+                    // Создаем canvas элемент
+                    const canvas = document.createElement('canvas');
+                    qrContainer.appendChild(canvas);
+                    
+                    QRCode.toCanvas(canvas, url, {
+                        width: 300,
+                        margin: 2,
+                        color: {
+                            dark: '#000000',
+                            light: '#FFFFFF'
+                        }
+                    }, function (error) {
+                        if (error) {
+                            console.error('Ошибка генерации QR кода:', error);
+                            qrContainer.innerHTML = `
+                                <div style="padding: 20px; border: 2px dashed #ccc; border-radius: 8px;">
+                                    <p style="color: #666; margin-bottom: 10px;">QR код не сгенерирован</p>
+                                    <p style="font-size: 12px; color: #999;">Используйте ссылку ниже для оплаты</p>
+                                </div>
+                            `;
+                        } else {
+                            console.log('QR код успешно сгенерирован');
+                        }
+                    });
+                } catch (error) {
+                    console.error('Ошибка при генерации QR:', error);
+                    qrContainer.innerHTML = `
+                        <div style="padding: 20px; border: 2px dashed #ccc; border-radius: 8px;">
+                            <p style="color: #666;">Ошибка генерации QR кода</p>
+                            <p style="font-size: 12px; color: #999; margin-top: 10px;">Используйте ссылку ниже для оплаты</p>
+                        </div>
+                    `;
                 }
-            });
+            }
+
+            // Пробуем сгенерировать сразу, если библиотека загружена
+            if (typeof QRCode !== 'undefined') {
+                generateQR();
+            } else {
+                // Ждем загрузки библиотеки
+                const checkInterval = setInterval(() => {
+                    if (typeof QRCode !== 'undefined') {
+                        clearInterval(checkInterval);
+                        generateQR();
+                    }
+                }, 100);
+                
+                // Таймаут на случай если библиотека не загрузится
+                setTimeout(() => {
+                    clearInterval(checkInterval);
+                    if (qrContainer.innerHTML.includes('Генерация')) {
+                        qrContainer.innerHTML = `
+                            <div style="padding: 20px; border: 2px dashed #ccc; border-radius: 8px;">
+                                <p style="color: #666;">Не удалось загрузить библиотеку QR кода</p>
+                                <p style="font-size: 12px; color: #999; margin-top: 10px;">Используйте ссылку ниже для оплаты</p>
+                            </div>
+                        `;
+                    }
+                }, 5000);
+            }
         }
 
         async function checkStatus() {
