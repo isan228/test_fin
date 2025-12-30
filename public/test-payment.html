@@ -41,21 +41,31 @@
         <div class="main-content">
             <!-- Форма создания платежа -->
             <section class="payment-form">
-                <h2>Создать тестовый платеж</h2>
+                <h2>Создать платеж через Финик</h2>
                 
                 <div class="payment-info">
                     <strong>Информация:</strong><br>
-                    Выберите API ключ и укажите сумму для создания тестового платежа.
-                    Платеж будет отправлен в систему Финика и обработан через callback.
+                    Эта форма использует новый endpoint <code>/api/finik/payment</code>, который работает с переменными окружения.<br>
+                    Убедитесь, что в файле <code>.env</code> установлены: <code>FINIK_API_KEY</code>, <code>FINIK_PRIVATE_PEM</code>, <code>FINIK_ACCOUNT_ID</code>
                 </div>
 
                 <form id="testPaymentForm" onsubmit="createTestPayment(event)">
                     <div class="form-group">
-                        <label for="apiKeySelect">API ключ *</label>
-                        <select id="apiKeySelect" name="apiKeyId" required>
-                            <option value="">Загрузка...</option>
-                        </select>
-                        <small>Выберите активный API ключ для тестирования</small>
+                        <label>
+                            <input type="checkbox" id="useEnvVars" checked onchange="togglePaymentMethod()">
+                            Использовать переменные окружения (новый способ)
+                        </label>
+                        <small>Если включено, используется /api/finik/payment. Если выключено - старый способ через БД.</small>
+                    </div>
+
+                    <div id="apiKeySelectGroup" style="display: none;">
+                        <div class="form-group">
+                            <label for="apiKeySelect">API ключ *</label>
+                            <select id="apiKeySelect" name="apiKeyId">
+                                <option value="">Загрузка...</option>
+                            </select>
+                            <small>Выберите активный API ключ для тестирования (старый способ)</small>
+                        </div>
                     </div>
                     
                     <div class="form-group">
@@ -66,8 +76,14 @@
                     
                     <div class="form-group">
                         <label for="redirectUrl">Redirect URL (URL после успешной оплаты) *</label>
-                        <input type="url" id="redirectUrl" name="redirectUrl" required value="http://2.56.179.126:3000/callback/finik" placeholder="https://example.com/success">
+                        <input type="url" id="redirectUrl" name="redirectUrl" required value="http://2.56.179.126:3000/success" placeholder="https://example.com/success">
                         <small>URL для редиректа после успешной оплаты</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="webhookUrl">Webhook URL (URL для получения статуса) *</label>
+                        <input type="url" id="webhookUrl" name="webhookUrl" required value="http://2.56.179.126:3000/webhooks/finik" placeholder="https://example.com/webhooks/finik">
+                        <small>URL куда Финик отправит webhook о статусе платежа</small>
                     </div>
                     
                     <div class="form-group">
@@ -148,21 +164,61 @@
             }
         }
 
+        // Переключение между методами создания платежа
+        function togglePaymentMethod() {
+            const useEnvVars = document.getElementById('useEnvVars').checked;
+            const apiKeySelectGroup = document.getElementById('apiKeySelectGroup');
+            const apiKeySelect = document.getElementById('apiKeySelect');
+            
+            if (useEnvVars) {
+                apiKeySelectGroup.style.display = 'none';
+                apiKeySelect.removeAttribute('required');
+            } else {
+                apiKeySelectGroup.style.display = 'block';
+                apiKeySelect.setAttribute('required', 'required');
+            }
+        }
+
         // Создание тестового платежа
         async function createTestPayment(e) {
             e.preventDefault();
             
-            const formData = {
-                apiKeyId: parseInt(document.getElementById('apiKeySelect').value),
-                amount: parseFloat(document.getElementById('amount').value),
-                redirectUrl: document.getElementById('redirectUrl').value.trim(),
-                merchantCategoryCode: document.getElementById('merchantCategoryCode').value.trim(),
-                name_en: document.getElementById('name_en').value.trim(),
-                description: document.getElementById('paymentDescription').value.trim()
-            };
+            const useEnvVars = document.getElementById('useEnvVars').checked;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const redirectUrl = document.getElementById('redirectUrl').value.trim();
+            const webhookUrl = document.getElementById('webhookUrl').value.trim();
+            const merchantCategoryCode = document.getElementById('merchantCategoryCode').value.trim();
+            const name_en = document.getElementById('name_en').value.trim();
+            const description = document.getElementById('paymentDescription').value.trim();
+
+            let endpoint, formData;
+
+            if (useEnvVars) {
+                // Новый способ - использует переменные окружения
+                endpoint = '/api/finik/payment';
+                formData = {
+                    amount: amount,
+                    redirectUrl: redirectUrl,
+                    webhookUrl: webhookUrl,
+                    merchantCategoryCode: merchantCategoryCode,
+                    name_en: name_en,
+                    description: description || undefined
+                };
+            } else {
+                // Старый способ - через БД
+                endpoint = '/api/payments/test';
+                formData = {
+                    apiKeyId: parseInt(document.getElementById('apiKeySelect').value),
+                    amount: amount,
+                    redirectUrl: redirectUrl,
+                    merchantCategoryCode: merchantCategoryCode,
+                    name_en: name_en,
+                    description: description
+                };
+            }
 
             try {
-                const response = await fetch('/api/payments/test', {
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -200,7 +256,10 @@
                     // Очистка формы
                     setTimeout(() => {
                         document.getElementById('testPaymentForm').reset();
-                        document.getElementById('redirectUrl').value = 'http://2.56.179.126:3000/callback/finik';
+                        document.getElementById('useEnvVars').checked = true;
+                        togglePaymentMethod();
+                        document.getElementById('redirectUrl').value = 'http://2.56.179.126:3000/success';
+                        document.getElementById('webhookUrl').value = 'http://2.56.179.126:3000/webhooks/finik';
                         document.getElementById('merchantCategoryCode').value = '0742';
                         document.getElementById('name_en').value = 'Test Payment';
                     }, 2000);
