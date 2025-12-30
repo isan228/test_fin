@@ -250,9 +250,10 @@
                             <a href="/payment.html?paymentUrl=${encodeURIComponent(result.paymentUrl)}&paymentId=${result.paymentId}" 
                                target="_blank" 
                                class="btn btn-primary" 
-                               style="display: inline-block; margin-top: 10px;">
+                               style="display: inline-block; margin-top: 10px; text-decoration: none;">
                                 📱 Показать QR код для оплаты
                             </a>
+                            ${result.warning ? `<br><br><div class="alert alert-error" style="margin-top: 10px;">⚠️ ${result.warning}</div>` : ''}
                         `;
                         resultDiv.appendChild(urlDiv);
                     }

@@ -124,11 +124,36 @@
     <script>
         // Получаем paymentId из URL параметров
         const urlParams = new URLSearchParams(window.location.search);
-        const paymentId = urlParams.get('paymentId');
-        const paymentUrl = urlParams.get('paymentUrl');
+        let paymentId = urlParams.get('paymentId');
+        let paymentUrl = urlParams.get('paymentUrl');
+
+        // Если параметров нет, проверяем hash (#)
+        if (!paymentId && !paymentUrl) {
+            const hash = window.location.hash.substring(1);
+            if (hash) {
+                const hashParams = new URLSearchParams(hash);
+                paymentId = hashParams.get('paymentId') || paymentId;
+                paymentUrl = hashParams.get('paymentUrl') || paymentUrl;
+            }
+        }
 
         if (!paymentId && !paymentUrl) {
-            document.getElementById('loading').innerHTML = '<p style="color: red;">Ошибка: не указан paymentId или paymentUrl</p>';
+            // Показываем форму для ввода paymentId или paymentUrl
+            document.getElementById('loading').innerHTML = `
+                <div style="text-align: left;">
+                    <h3>Введите данные платежа</h3>
+                    <div class="form-group">
+                        <label for="inputPaymentId">Payment ID (UUID):</label>
+                        <input type="text" id="inputPaymentId" placeholder="dc331219-34ee-43b1-b4cd-b10748adaef0" style="width: 100%; padding: 10px; margin: 10px 0;">
+                    </div>
+                    <div style="text-align: center; margin: 10px 0;">или</div>
+                    <div class="form-group">
+                        <label for="inputPaymentUrl">Payment URL:</label>
+                        <input type="text" id="inputPaymentUrl" placeholder="https://api.acquiring.averspay.kg/v1/redirect?..." style="width: 100%; padding: 10px; margin: 10px 0;">
+                    </div>
+                    <button class="btn btn-primary" onclick="loadFromInput()" style="width: 100%;">Показать QR код</button>
+                </div>
+            `;
         } else {
             if (paymentUrl) {
                 // Если есть paymentUrl, сразу показываем QR код
@@ -136,6 +161,19 @@
             } else if (paymentId) {
                 // Если только paymentId, пытаемся получить информацию о платеже
                 loadPaymentInfo(paymentId);
+            }
+        }
+
+        function loadFromInput() {
+            const inputPaymentId = document.getElementById('inputPaymentId')?.value;
+            const inputPaymentUrl = document.getElementById('inputPaymentUrl')?.value;
+
+            if (inputPaymentUrl) {
+                displayPayment(inputPaymentUrl, inputPaymentId);
+            } else if (inputPaymentId) {
+                loadPaymentInfo(inputPaymentId);
+            } else {
+                alert('Пожалуйста, введите Payment ID или Payment URL');
             }
         }
 
@@ -177,22 +215,46 @@
 
         async function loadPaymentInfo(paymentId) {
             try {
+                document.getElementById('loading').innerHTML = '<p>Загрузка информации о платеже...</p>';
+                
                 const response = await fetch(`/api/payments?paymentId=${paymentId}`);
                 const result = await response.json();
                 
                 if (result.success && result.data && result.data.length > 0) {
                     const payment = result.data[0];
-                    // Здесь можно получить paymentUrl из callbackData
+                    // Пытаемся получить paymentUrl из разных мест
+                    let paymentUrl = null;
+                    
                     if (payment.callbackData && payment.callbackData.paymentUrl) {
-                        displayPayment(payment.callbackData.paymentUrl, paymentId);
+                        paymentUrl = payment.callbackData.paymentUrl;
+                    } else if (payment.callbackData && payment.callbackData.finikResponse && payment.callbackData.finikResponse.paymentUrl) {
+                        paymentUrl = payment.callbackData.finikResponse.paymentUrl;
+                    }
+                    
+                    if (paymentUrl) {
+                        displayPayment(paymentUrl, paymentId);
+                        if (payment.amount) {
+                            document.getElementById('amount').textContent = payment.amount;
+                        }
                     } else {
-                        document.getElementById('loading').innerHTML = '<p>Платеж найден, но URL оплаты недоступен</p>';
+                        document.getElementById('loading').innerHTML = `
+                            <p>Платеж найден, но URL оплаты недоступен.</p>
+                            <p><strong>Payment ID:</strong> ${paymentId}</p>
+                            <p><strong>Статус:</strong> ${payment.status}</p>
+                            <p>Попробуйте создать новый платеж или введите Payment URL вручную.</p>
+                        `;
                     }
                 } else {
-                    document.getElementById('loading').innerHTML = '<p>Платеж не найден</p>';
+                    document.getElementById('loading').innerHTML = `
+                        <p>Платеж не найден в базе данных.</p>
+                        <p>Если у вас есть Payment URL, введите его в форму выше.</p>
+                    `;
                 }
             } catch (error) {
-                document.getElementById('loading').innerHTML = `<p style="color: red;">Ошибка: ${error.message}</p>`;
+                document.getElementById('loading').innerHTML = `
+                    <p style="color: red;">Ошибка: ${error.message}</p>
+                    <p>Попробуйте ввести Payment URL вручную в форме выше.</p>
+                `;
             }
         }
 
