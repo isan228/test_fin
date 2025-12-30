@@ -181,8 +181,25 @@
             document.getElementById('loading').style.display = 'none';
             document.getElementById('paymentContent').style.display = 'block';
 
+            // Пытаемся получить правильный QR URL
+            // Если это redirect URL, извлекаем paymentId и строим QR URL
+            let qrUrl = url;
+            
+            if (url.includes('/v1/redirect') || url.includes('api.acquiring.averspay.kg')) {
+                const paymentIdMatch = url.match(/paymentId=([^&]+)/);
+                if (paymentIdMatch && paymentIdMatch[1]) {
+                    const extractedPaymentId = paymentIdMatch[1];
+                    // Строим URL для QR кода в формате qr.finik.kg
+                    qrUrl = `https://qr.finik.kg/${extractedPaymentId}?type=t`;
+                    console.log('Converted redirect URL to QR URL:', qrUrl);
+                }
+            } else if (url.includes('qr.finik.kg')) {
+                // Уже правильный формат
+                qrUrl = url;
+            }
+
             // Генерируем QR код
-            QRCode.toCanvas(document.getElementById('qrcode'), url, {
+            QRCode.toCanvas(document.getElementById('qrcode'), qrUrl, {
                 width: 300,
                 margin: 2,
                 color: {
