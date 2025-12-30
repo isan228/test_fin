@@ -217,11 +217,22 @@
             qrContainer.innerHTML = '<p>Генерация QR кода...</p>';
             
             // Функция для генерации QR кода
+            let retryCount = 0;
+            const maxRetries = 10;
+            
             function generateQR() {
                 if (typeof QRCode === 'undefined') {
-                    console.error('QRCode library not loaded, retrying...');
-                    setTimeout(generateQR, 500);
-                    return;
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        console.log(`QRCode library not loaded, retrying... (${retryCount}/${maxRetries})`);
+                        setTimeout(generateQR, 500);
+                        return;
+                    } else {
+                        // Используем альтернативный способ - через API
+                        console.warn('QRCode library not available, using alternative method');
+                        generateQRViaAPI(url);
+                        return;
+                    }
                 }
 
                 try {
@@ -242,25 +253,25 @@
                     }, function (error) {
                         if (error) {
                             console.error('Ошибка генерации QR кода:', error);
-                            qrContainer.innerHTML = `
-                                <div style="padding: 20px; border: 2px dashed #ccc; border-radius: 8px;">
-                                    <p style="color: #666; margin-bottom: 10px;">QR код не сгенерирован</p>
-                                    <p style="font-size: 12px; color: #999;">Используйте ссылку ниже для оплаты</p>
-                                </div>
-                            `;
+                            generateQRViaAPI(url);
                         } else {
-                            console.log('QR код успешно сгенерирован');
+                            console.log('✅ QR код успешно сгенерирован');
                         }
                     });
                 } catch (error) {
                     console.error('Ошибка при генерации QR:', error);
-                    qrContainer.innerHTML = `
-                        <div style="padding: 20px; border: 2px dashed #ccc; border-radius: 8px;">
-                            <p style="color: #666;">Ошибка генерации QR кода</p>
-                            <p style="font-size: 12px; color: #999; margin-top: 10px;">Используйте ссылку ниже для оплаты</p>
-                        </div>
-                    `;
+                    generateQRViaAPI(url);
                 }
+            }
+            
+            // Альтернативный способ через API или изображение
+            function generateQRViaAPI(url) {
+                // Используем онлайн сервис для генерации QR кода
+                const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+                qrContainer.innerHTML = `
+                    <img src="${qrApiUrl}" alt="QR Code" style="max-width: 300px; height: auto; border: 1px solid #ddd; border-radius: 8px;" 
+                         onerror="this.parentElement.innerHTML='<p style=\'color:#666;\'>Не удалось загрузить QR код. Используйте ссылку ниже.</p>'">
+                `;
             }
 
             // Пробуем сгенерировать сразу, если библиотека загружена
