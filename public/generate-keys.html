@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Генерация ключей - Финик</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .key-display {
+            background: #2d3748;
+            color: #68d391;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .copy-btn {
+            background: #4299e1;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        .copy-btn:hover {
+            background: #3182ce;
+        }
+        .callback-url-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #4299e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔐 Генерация ключей для Финика</h1>
+            <p class="subtitle">Создайте пару ключей и API ключ от Финика</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Шаг 1: Генерация ключей -->
+            <section class="card">
+                <h2>Шаг 1: Генерация пары ключей</h2>
+                <p>Нажмите кнопку для генерации открытого и закрытого ключа</p>
+                <button class="btn btn-primary" onclick="generateKeys()">Сгенерировать ключи</button>
+                
+                <div id="keysResult" style="display: none; margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Открытый ключ (Public Key):</label>
+                        <div class="key-display" id="publicKeyDisplay"></div>
+                        <button class="copy-btn" onclick="copyToClipboard('publicKey')">Копировать</button>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Закрытый ключ (Private Key):</label>
+                        <div class="key-display" id="privateKeyDisplay"></div>
+                        <button class="copy-btn" onclick="copyToClipboard('privateKey')">Копировать</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Шаг 2: Создание API ключа от Финика -->
+            <section class="card">
+                <h2>Шаг 2: Создание API ключа от Финика</h2>
+                
+                <div class="callback-url-info">
+                    <strong>Callback URL для вашего сервера:</strong><br>
+                    <code id="callbackUrlDisplay">http://2.56.179.126:3000/callback/finik</code>
+                    <button class="copy-btn" onclick="copyToClipboard('callbackUrl')">Копировать URL</button>
+                </div>
+
+                <form id="createFinikKeyForm" onsubmit="createFinikKey(event)">
+                    <div class="form-group">
+                        <label for="keyName">Название ключа *</label>
+                        <input type="text" id="keyName" name="name" required placeholder="Например: Основной ключ">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="publicKeyInput">Открытый ключ (Public Key) *</label>
+                        <textarea id="publicKeyInput" name="publicKey" rows="6" required placeholder="Вставьте открытый ключ из шага 1"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="privateKeyInput">Закрытый ключ (Private Key) *</label>
+                        <textarea id="privateKeyInput" name="privateKey" rows="6" required placeholder="Вставьте закрытый ключ из шага 1"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="callbackUrlInput">Callback URL *</label>
+                        <input type="url" id="callbackUrlInput" name="callbackUrl" required value="http://2.56.179.126:3000/callback/finik">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">Описание</label>
+                        <textarea id="description" name="description" rows="2" placeholder="Дополнительная информация"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Создать API ключ от Финика</button>
+                </form>
+
+                <div id="finikKeyResult" style="display: none; margin-top: 20px;">
+                    <div class="alert alert-success" id="finikKeySuccess"></div>
+                </div>
+            </section>
+
+            <!-- Навигация -->
+            <section class="card">
+                <a href="index.html" class="btn btn-primary">← Вернуться к управлению ключами</a>
+                <a href="test-payment.html" class="btn btn-primary" style="margin-left: 10px;">Тестировать платежи →</a>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let generatedKeys = {};
+
+        // Генерация ключей
+        async function generateKeys() {
+            try {
+                const response = await fetch('/api/keys/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    generatedKeys = result.data;
+                    
+                    document.getElementById('publicKeyDisplay').textContent = result.data.publicKey;
+                    document.getElementById('privateKeyDisplay').textContent = result.data.privateKey;
+                    document.getElementById('keysResult').style.display = 'block';
+                    
+                    // Автоматически заполняем форму
+                    document.getElementById('publicKeyInput').value = result.data.publicKey;
+                    document.getElementById('privateKeyInput').value = result.data.privateKey;
+                    
+                    showAlert('Ключи успешно сгенерированы!', 'success');
+                } else {
+                    showAlert('Ошибка: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка генерации ключей: ' + error.message, 'error');
+            }
+        }
+
+        // Создание API ключа от Финика
+        async function createFinikKey(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('keyName').value,
+                publicKey: document.getElementById('publicKeyInput').value.trim(),
+                privateKey: document.getElementById('privateKeyInput').value.trim(),
+                callbackUrl: document.getElementById('callbackUrlInput').value.trim(),
+                description: document.getElementById('description').value.trim()
+            };
+
+            try {
+                const response = await fetch('/api/keys/create-finik', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const resultDiv = document.getElementById('finikKeyResult');
+                    const successDiv = document.getElementById('finikKeySuccess');
+                    
+                    let message = 'API ключ успешно создан!<br>';
+                    if (result.data.finikApiKey) {
+                        message += '<strong>API ключ от Финика:</strong> ' + result.data.finikApiKey;
+                    }
+                    if (result.warning) {
+                        message += '<br><small style="color: orange;">⚠ ' + result.warning + '</small>';
+                    }
+                    
+                    successDiv.innerHTML = message;
+                    resultDiv.style.display = 'block';
+                    
+                    showAlert('API ключ создан!', 'success');
+                    
+                    // Очистка формы
+                    setTimeout(() => {
+                        document.getElementById('createFinikKeyForm').reset();
+                        document.getElementById('callbackUrlInput').value = 'http://2.56.179.126:3000/callback/finik';
+                    }, 2000);
+                } else {
+                    showAlert('Ошибка: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка создания ключа: ' + error.message, 'error');
+            }
+        }
+
+        // Копирование в буфер обмена
+        function copyToClipboard(type) {
+            let text = '';
+            
+            if (type === 'publicKey') {
+                text = document.getElementById('publicKeyDisplay').textContent;
+            } else if (type === 'privateKey') {
+                text = document.getElementById('privateKeyDisplay').textContent;
+            } else if (type === 'callbackUrl') {
+                text = document.getElementById('callbackUrlDisplay').textContent;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert('Скопировано в буфер обмена!', 'success');
+            }).catch(err => {
+                showAlert('Ошибка копирования: ' + err.message, 'error');
+            });
+        }
+
+        // Показать уведомление
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = message;
+            alert.style.position = 'fixed';
+            alert.style.top = '20px';
+            alert.style.right = '20px';
+            alert.style.zIndex = '9999';
+            alert.style.minWidth = '300px';
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Установка callback URL
+        document.getElementById('callbackUrlDisplay').textContent = 
+            window.location.origin + '/callback/finik';
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест платежей - Финик</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .payment-form {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        .payment-result {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        .payment-result.show {
+            display: block;
+        }
+        .payment-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💳 Тестирование платежей</h1>
+            <p class="subtitle">Создайте тестовый платеж через API Финика</p>
+        </header>
+
+        <div class="main-content">
+            <!-- Форма создания платежа -->
+            <section class="payment-form">
+                <h2>Создать тестовый платеж</h2>
+                
+                <div class="payment-info">
+                    <strong>Информация:</strong><br>
+                    Выберите API ключ и укажите сумму для создания тестового платежа.
+                    Платеж будет отправлен в систему Финика и обработан через callback.
+                </div>
+
+                <form id="testPaymentForm" onsubmit="createTestPayment(event)">
+                    <div class="form-group">
+                        <label for="apiKeySelect">API ключ *</label>
+                        <select id="apiKeySelect" name="apiKeyId" required>
+                            <option value="">Загрузка...</option>
+                        </select>
+                        <small>Выберите активный API ключ для тестирования</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="amount">Сумма платежа *</label>
+                        <input type="number" id="amount" name="amount" required min="0.01" step="0.01" placeholder="100.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="currency">Валюта</label>
+                        <select id="currency" name="currency">
+                            <option value="RUB" selected>RUB (Российский рубль)</option>
+                            <option value="USD">USD (Доллар США)</option>
+                            <option value="EUR">EUR (Евро)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="paymentDescription">Описание платежа</label>
+                        <textarea id="paymentDescription" name="description" rows="3" placeholder="Тестовый платеж для проверки системы"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Создать тестовый платеж</button>
+                </form>
+
+                <div id="paymentResult" class="payment-result">
+                    <h3>Результат создания платежа:</h3>
+                    <pre id="paymentResultContent"></pre>
+                </div>
+            </section>
+
+            <!-- История платежей -->
+            <section class="card">
+                <h2>История платежей</h2>
+                <button class="btn btn-primary" onclick="loadPayments()" style="margin-bottom: 15px;">Обновить список</button>
+                <div id="paymentsList" class="payments-list">
+                    <div class="loading">Загрузка...</div>
+                </div>
+            </section>
+
+            <!-- Навигация -->
+            <section class="card">
+                <a href="index.html" class="btn btn-primary">← Управление ключами</a>
+                <a href="generate-keys.html" class="btn btn-primary" style="margin-left: 10px;">Генерация ключей →</a>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        // Загрузка API ключей при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            loadApiKeys();
+            loadPayments();
+        });
+
+        // Загрузка списка API ключей
+        async function loadApiKeys() {
+            try {
+                const response = await fetch('/api/keys');
+                const result = await response.json();
+                
+                const select = document.getElementById('apiKeySelect');
+                select.innerHTML = '<option value="">Выберите API ключ...</option>';
+                
+                if (result.success && result.data.length > 0) {
+                    result.data
+                        .filter(key => key.isActive)
+                        .forEach(key => {
+                            const option = document.createElement('option');
+                            option.value = key.id;
+                            option.textContent = `${key.name}${key.finikApiKey ? ' (API: ' + key.finikApiKey.substring(0, 20) + '...)' : ''}`;
+                            select.appendChild(option);
+                        });
+                } else {
+                    select.innerHTML = '<option value="">Нет активных ключей</option>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки ключей:', error);
+                document.getElementById('apiKeySelect').innerHTML = 
+                    '<option value="">Ошибка загрузки</option>';
+            }
+        }
+
+        // Создание тестового платежа
+        async function createTestPayment(e) {
+            e.preventDefault();
+            
+            const formData = {
+                apiKeyId: parseInt(document.getElementById('apiKeySelect').value),
+                amount: parseFloat(document.getElementById('amount').value),
+                currency: document.getElementById('currency').value,
+                description: document.getElementById('paymentDescription').value
+            };
+
+            try {
+                const response = await fetch('/api/payments/test', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                const resultDiv = document.getElementById('paymentResult');
+                const resultContent = document.getElementById('paymentResultContent');
+                
+                if (result.success) {
+                    resultContent.textContent = JSON.stringify(result, null, 2);
+                    resultDiv.className = 'payment-result show';
+                    resultDiv.style.borderLeft = '4px solid #27ae60';
+                    
+                    showAlert('Платеж создан успешно!', 'success');
+                    
+                    // Обновляем список платежей
+                    loadPayments();
+                    
+                    // Очистка формы
+                    setTimeout(() => {
+                        document.getElementById('testPaymentForm').reset();
+                        document.getElementById('currency').value = 'RUB';
+                    }, 2000);
+                } else {
+                    resultContent.textContent = 'Ошибка: ' + result.error;
+                    resultDiv.className = 'payment-result show';
+                    resultDiv.style.borderLeft = '4px solid #e74c3c';
+                    showAlert('Ошибка: ' + result.error, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка создания платежа: ' + error.message, 'error');
+            }
+        }
+
+        // Загрузка списка платежей
+        async function loadPayments() {
+            try {
+                const response = await fetch('/api/payments');
+                const result = await response.json();
+                
+                const paymentsList = document.getElementById('paymentsList');
+                
+                if (result.success && result.data.length > 0) {
+                    paymentsList.innerHTML = result.data.map(payment => createPaymentCard(payment)).join('');
+                } else {
+                    paymentsList.innerHTML = '<div class="empty">Нет платежей</div>';
+                }
+            } catch (error) {
+                console.error('Ошибка загрузки платежей:', error);
+                document.getElementById('paymentsList').innerHTML = 
+                    '<div class="empty">Ошибка загрузки платежей</div>';
+            }
+        }
+
+        // Создание карточки платежа
+        function createPaymentCard(payment) {
+            return `
+                <div class="payment-item">
+                    <div class="key-header">
+                        <div class="key-name">Платеж #${escapeHtml(payment.paymentId)}</div>
+                        <span class="payment-status status-${payment.status}">
+                            ${getStatusText(payment.status)}
+                        </span>
+                    </div>
+                    <div class="key-info">
+                        <strong>Сумма:</strong> ${payment.amount} ${payment.currency}
+                    </div>
+                    ${payment.apiKey ? `<div class="key-info"><strong>API ключ:</strong> ${escapeHtml(payment.apiKey.name)}</div>` : ''}
+                    ${payment.callbackData ? `<div class="key-info"><strong>Данные:</strong> <pre style="font-size: 11px; max-height: 100px; overflow: auto;">${JSON.stringify(payment.callbackData, null, 2)}</pre></div>` : ''}
+                    <div class="key-info">
+                        <small>Создан: ${new Date(payment.createdAt).toLocaleString('ru-RU')}</small>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Получить текст статуса
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Ожидает',
+                'success': 'Успешно',
+                'failed': 'Ошибка',
+                'cancelled': 'Отменен'
+            };
+            return statusMap[status] || status;
+        }
+
+        // Экранирование HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Показать уведомление
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type} show`;
+            alert.textContent = message;
+            alert.style.position = 'fixed';
+            alert.style.top = '20px';
+            alert.style.right = '20px';
+            alert.style.zIndex = '9999';
+            alert.style.minWidth = '300px';
+            
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
+

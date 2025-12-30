@@ -30,6 +30,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'Описание ключа'
     },
+    callbackUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'URL для callback от Финика'
+    },
+    finikApiKey: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'API ключ полученный от Финика'
+    },
     createdAt: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW

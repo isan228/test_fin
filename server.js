@@ -30,6 +30,16 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Страница генерации ключей
+app.get('/generate-keys', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'generate-keys.html'));
+});
+
+// Страница тестирования платежей
+app.get('/test-payment', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'test-payment.html'));
+});
+
 // Проверка подключения к БД и синхронизация
 sequelize.authenticate()
   .then(() => {
