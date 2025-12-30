@@ -120,18 +120,32 @@ function buildCanonicalString(params) {
  * @returns {String} Base64 подпись
  */
 function signRequest(requestData, privateKeyPem) {
-  // Строим каноническую строку
-  const canonicalString = buildCanonicalString(requestData);
-  
-  // Подписываем RSA-SHA256
-  const sign = crypto.createSign('RSA-SHA256');
-  sign.update(canonicalString, 'utf8');
-  sign.end();
-  
-  // Возвращаем Base64 подпись
-  const signature = sign.sign(privateKeyPem, 'base64');
-  
-  return signature;
+  try {
+    // Нормализация приватного ключа (на случай если пришел из .env с \n)
+    let normalizedKey = privateKeyPem;
+    if (typeof normalizedKey === 'string') {
+      normalizedKey = normalizedKey.replace(/\\n/g, '\n').trim();
+    }
+    
+    // Строим каноническую строку
+    const canonicalString = buildCanonicalString(requestData);
+    
+    // Подписываем RSA-SHA256
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(canonicalString, 'utf8');
+    sign.end();
+    
+    // Возвращаем Base64 подпись
+    const signature = sign.sign(normalizedKey, 'base64');
+    
+    return signature;
+  } catch (error) {
+    // Более детальная ошибка для отладки
+    if (error.message.includes('DECODER')) {
+      throw new Error(`Ошибка декодирования приватного ключа: ${error.message}. Проверьте формат ключа в .env файле. Ключ должен быть в формате PEM.`);
+    }
+    throw error;
+  }
 }
 
 /**

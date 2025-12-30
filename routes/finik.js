@@ -18,7 +18,7 @@ router.post('/payment', async (req, res) => {
   try {
     // Получаем данные из переменных окружения
     const apiKey = process.env.FINIK_API_KEY;
-    const privateKeyPem = process.env.FINIK_PRIVATE_PEM;
+    let privateKeyPem = process.env.FINIK_PRIVATE_PEM;
     const accountId = process.env.FINIK_ACCOUNT_ID;
     const environment = process.env.FINIK_ENVIRONMENT || 'production';
 
@@ -34,6 +34,18 @@ router.post('/payment', async (req, res) => {
       return res.status(500).json({
         success: false,
         error: 'FINIK_PRIVATE_PEM не установлен в переменных окружения'
+      });
+    }
+
+    // Нормализация приватного ключа
+    // Заменяем \n на реальные переносы строк и убираем лишние пробелы
+    privateKeyPem = privateKeyPem.replace(/\\n/g, '\n').trim();
+    
+    // Проверяем формат ключа
+    if (!privateKeyPem.includes('BEGIN PRIVATE KEY') && !privateKeyPem.includes('BEGIN RSA PRIVATE KEY')) {
+      return res.status(500).json({
+        success: false,
+        error: 'FINIK_PRIVATE_PEM имеет неверный формат. Должен быть PEM формат с BEGIN PRIVATE KEY или BEGIN RSA PRIVATE KEY'
       });
     }
 
