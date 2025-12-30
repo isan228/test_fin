@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { loadPrivateKey } = require('./loadPrivateKey');
 require('dotenv').config();
 
 /**
@@ -7,7 +8,13 @@ require('dotenv').config();
 function checkPrivateKey() {
   console.log('=== Проверка приватного ключа ===\n');
   
-  const privateKeyPem = process.env.FINIK_PRIVATE_PEM;
+  let privateKeyPem;
+  try {
+    privateKeyPem = loadPrivateKey();
+  } catch (error) {
+    console.error('❌', error.message);
+    return false;
+  }
   
   if (!privateKeyPem) {
     console.error('❌ FINIK_PRIVATE_PEM не установлен в переменных окружения');

@@ -3,6 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { createPayment, verifyWebhookSignature, FINIK_API_URLS } = require('../utils/finikApi');
 const { Payment, ApiKey } = require('../models');
+const { loadPrivateKey } = require('../utils/loadPrivateKey');
 
 /**
  * POST /api/finik/payment
@@ -18,7 +19,6 @@ router.post('/payment', async (req, res) => {
   try {
     // Получаем данные из переменных окружения
     const apiKey = process.env.FINIK_API_KEY;
-    let privateKeyPem = process.env.FINIK_PRIVATE_PEM;
     const accountId = process.env.FINIK_ACCOUNT_ID;
     const environment = process.env.FINIK_ENVIRONMENT || 'production';
 
@@ -30,39 +30,31 @@ router.post('/payment', async (req, res) => {
       });
     }
 
-    if (!privateKeyPem) {
+    if (!accountId) {
       return res.status(500).json({
         success: false,
-        error: 'FINIK_PRIVATE_PEM не установлен в переменных окружения'
+        error: 'FINIK_ACCOUNT_ID не установлен в переменных окружения'
       });
     }
 
-    // Нормализация приватного ключа
-    // Заменяем \n на реальные переносы строк и убираем лишние пробелы
-    privateKeyPem = privateKeyPem.replace(/\\n/g, '\n').trim();
+    // Загружаем приватный ключ (из файла или переменной окружения)
+    let privateKeyPem;
+    try {
+      privateKeyPem = loadPrivateKey();
+    } catch (keyLoadError) {
+      return res.status(500).json({
+        success: false,
+        error: keyLoadError.message,
+        hint: 'Создайте файл finik_private.pem в корне проекта или установите FINIK_PRIVATE_PEM в .env'
+      });
+    }
     
     // Проверяем формат ключа
     if (!privateKeyPem.includes('BEGIN PRIVATE KEY') && !privateKeyPem.includes('BEGIN RSA PRIVATE KEY')) {
       return res.status(500).json({
         success: false,
-        error: 'FINIK_PRIVATE_PEM имеет неверный формат. Должен быть PEM формат с BEGIN PRIVATE KEY или BEGIN RSA PRIVATE KEY',
-        hint: 'Проверьте формат ключа в .env файле. Используйте: npm run check-key'
-      });
-    }
-
-    // Пробуем использовать ключ для проверки
-    try {
-      const crypto = require('crypto');
-      const testSign = crypto.createSign('RSA-SHA256');
-      testSign.update('test', 'utf8');
-      testSign.end();
-      testSign.sign(privateKeyPem, 'base64');
-    } catch (keyError) {
-      console.error('Ошибка проверки ключа:', keyError);
-      return res.status(500).json({
-        success: false,
-        error: `Ошибка декодирования приватного ключа: ${keyError.message}`,
-        hint: 'Запустите: npm run check-key для диагностики. Убедитесь, что ключ в .env использует правильный формат.'
+        error: 'Приватный ключ имеет неверный формат. Должен быть PEM формат с BEGIN PRIVATE KEY или BEGIN RSA PRIVATE KEY',
+        hint: 'Проверьте формат ключа. Используйте: npm run check-key'
       });
     }
 
