@@ -16,7 +16,8 @@ module.exports = (sequelize, DataTypes) => {
     paymentId: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: true,
+      // unique: true - убрано из-за проблем с alter: true в PostgreSQL
+      // Уникальность будет добавлена через миграцию или отдельное ограничение
       comment: 'ID платежа от Финика'
     },
     amount: {
