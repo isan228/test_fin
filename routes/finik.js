@@ -137,7 +137,19 @@ router.post('/payment', async (req, res) => {
     if (result.success) {
       // Сохраняем платеж в БД
       try {
-        await Payment.create({
+        // Ищем ApiKey по accountId, если есть
+        let apiKeyRecord = null;
+        if (accountId) {
+          apiKeyRecord = await ApiKey.findOne({
+            where: {
+              accountId: accountId,
+              isActive: true
+            }
+          });
+        }
+
+        // Создаем платеж с apiKeyId, если найден, или без него (если модель позволяет)
+        const paymentData = {
           paymentId: result.paymentId,
           amount: parseFloat(amount),
           currency: 'KGS',
@@ -147,8 +159,15 @@ router.post('/payment', async (req, res) => {
             finikResponse: result,
             accountId: accountId
           }
-        });
-        console.log('Payment saved to database:', result.paymentId);
+        };
+
+        // Добавляем apiKeyId только если найден
+        if (apiKeyRecord) {
+          paymentData.apiKeyId = apiKeyRecord.id;
+        }
+
+        await Payment.create(paymentData);
+        console.log('Payment saved to database:', result.paymentId, apiKeyRecord ? `(apiKeyId: ${apiKeyRecord.id})` : '(без apiKeyId)');
       } catch (dbError) {
         console.error('Error saving payment to database:', dbError);
         // Не прерываем процесс, просто логируем ошибку

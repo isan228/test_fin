@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     apiKeyId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true, // Разрешаем null для платежей, созданных через переменные окружения
       references: {
         model: 'api_keys',
         key: 'id'
