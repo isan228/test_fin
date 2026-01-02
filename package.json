@@ -9,7 +9,8 @@
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "check-key": "node -e \"require('./utils/checkKey').checkPrivateKey()\"",
-    "diagnose": "node utils/diagnosePayment.js"
+    "diagnose": "node utils/diagnosePayment.js",
+    "test-signature": "node utils/testSignature.js"
   },
   "keywords": ["finik", "payment", "api"],
   "author": "",
