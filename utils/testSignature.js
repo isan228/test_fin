@@ -89,11 +89,19 @@ try {
   console.log('Ожидаемый формат:');
   expectedFormat.forEach((part, index) => {
     const actual = parts[index] || '';
-    const match = index === 0 ? actual === 'post' :
-                   index === 1 ? actual === '/payment' :
-                   index === 2 ? actual.includes('host:') && actual.includes('x-api-key:') :
-                   index === 3 ? actual === '' :
-                   index === 4 ? actual.startsWith('{');
+    let match = false;
+    
+    if (index === 0) {
+      match = actual === 'post';
+    } else if (index === 1) {
+      match = actual === '/payment';
+    } else if (index === 2) {
+      match = actual.includes('host:') && actual.includes('x-api-key:');
+    } else if (index === 3) {
+      match = actual === '';
+    } else if (index === 4) {
+      match = actual.startsWith('{');
+    }
     
     console.log(`   ${index + 1}. ${match ? '✅' : '❌'} ${part.substring(0, 50)}...`);
     if (!match) {
