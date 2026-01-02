@@ -71,7 +71,8 @@ async function createPayment(params) {
   const baseUrl = FINIK_API_URLS[normalizedEnv] || FINIK_API_URLS.production;
   const host = new URL(baseUrl).host;
   const timestamp = Date.now().toString();
-  const path = '/v1/payment';
+  // Путь для создания платежа (может быть /payment или /v1/payment в зависимости от версии API)
+  const path = process.env.FINIK_API_PATH || '/payment';
 
   // Формируем тело запроса
   const body = {
