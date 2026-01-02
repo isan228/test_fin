@@ -160,6 +160,15 @@ router.post('/payment', async (req, res) => {
         paymentId: result.paymentId
       };
       
+      // Проверяем статус в URL
+      if (result.paymentUrl && result.paymentUrl.includes('status=failed')) {
+        response.success = false;
+        response.error = 'Платеж отклонен Фиником (status=failed). Проверьте логи сервера для деталей.';
+        response.warning = 'Возможные причины: неправильный AccountId, API Key, неактивированный аккаунт, или проблема с подписью.';
+        response.status = 'failed';
+        return res.status(400).json(response);
+      }
+      
       // Добавляем предупреждение если есть
       if (result.warning) {
         response.warning = result.warning;
