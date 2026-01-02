@@ -91,3 +91,5 @@ npm run check-key
 3. Проверьте права: `chmod 600 finik_private.pem`
 4. Убедитесь, что файл в корне проекта (там же где server.js)
 
+
+

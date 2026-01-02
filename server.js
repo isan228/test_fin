@@ -63,8 +63,12 @@ sequelize.authenticate()
   .then(() => {
     console.log('✅ Подключение к базе данных установлено успешно.');
     
-    // Синхронизация моделей с БД (создание таблиц, если их нет)
-    return sequelize.sync({ alter: false });
+    // Синхронизация моделей с БД
+    // alter: true - автоматически добавляет недостающие колонки (безопасно для тестового окружения)
+    // alter: false - только создает таблицы, если их нет (безопасно для продакшена)
+    const syncOptions = process.env.NODE_ENV === 'production' ? { alter: false } : { alter: true };
+    console.log(`🔄 Синхронизация БД с опциями:`, syncOptions);
+    return sequelize.sync(syncOptions);
   })
   .then(() => {
     console.log('✅ Модели синхронизированы с базой данных.');

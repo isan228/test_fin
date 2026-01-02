@@ -112,3 +112,5 @@ openssl genrsa -out finik_private.pem 2048
 
 Затем откройте файл `finik_private.pem` и скопируйте ВСЁ содержимое в `.env`.
 
+
+

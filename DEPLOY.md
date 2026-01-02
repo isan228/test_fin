@@ -13,7 +13,7 @@ sudo apt install nodejs npm postgresql postgresql-contrib
 # Создайте базу данных
 sudo -u postgres psql
 CREATE DATABASE finik_db;
-CREATE USER finik_user WITH PASSWORD 'your_secure_password';
+CREATE USER finik_user WITH PASSWORD 'Enigma10';
 GRANT ALL PRIVILEGES ON DATABASE finik_db TO finik_user;
 \q
 ```
@@ -155,4 +155,6 @@ pm2 restart finik-api
 - **Ошибка подключения к БД**: Проверьте настройки в `.env` и доступность PostgreSQL
 - **Порт занят**: Измените PORT в `.env` или освободите порт
 - **Права доступа**: Убедитесь, что у пользователя есть права на директорию проекта
+
+
 

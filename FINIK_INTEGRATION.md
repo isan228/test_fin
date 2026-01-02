@@ -253,3 +253,5 @@ console.log('Canonical string:', canonical);
 - [ ] Логирование настроено
 - [ ] Тестирование на beta окружении пройдено
 
+
+

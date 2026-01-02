@@ -215,3 +215,5 @@ curl -X POST http://localhost:3000/api/finik/payment \
 4. После оплаты (или отмены) вы будете перенаправлены на `redirectUrl`
 5. Финик отправит webhook на `webhookUrl` со статусом
 
+
+

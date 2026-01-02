@@ -100,3 +100,5 @@ curl -X POST http://2.56.179.126:3000/api/finik/payment \
    - Используемые credentials (без приватного ключа)
    - Окружение (beta/production)
 
+
+
