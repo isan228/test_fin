@@ -117,17 +117,35 @@ async function createPayment(params) {
 
   // Отправляем запрос
   try {
+    // Логируем каноническую строку для отладки подписи
+    const { buildCanonicalString } = require('./finikSigner');
+    const canonicalString = buildCanonicalString(requestData);
+    
     // Логируем запрос для отладки (без чувствительных данных)
     console.log('═══════════════════════════════════════════════════════');
     console.log('📤 Создание платежа в Финике:');
+    console.log('   Full URL:', `${baseUrl}${path}`);
+    console.log('   Path:', path);
     console.log('   Amount:', amount);
     console.log('   PaymentId:', body.PaymentId);
     console.log('   AccountId:', accountId);
     console.log('   Environment:', normalizedEnv, `(нормализовано из: ${environment})`);
     console.log('   Base URL:', baseUrl);
+    console.log('   Host:', host);
+    console.log('   Timestamp:', timestamp);
     console.log('   API Key (первые 10 символов):', apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН');
     console.log('   Signature:', signature ? signature.substring(0, 20) + '...' : 'НЕ СГЕНЕРИРОВАНА');
+    console.log('   Canonical String (для подписи):');
+    console.log('   ───────────────────────────────────────────────────');
+    console.log(canonicalString);
+    console.log('   ───────────────────────────────────────────────────');
     console.log('   Request Body:', JSON.stringify(body, null, 2));
+    console.log('   Headers:', JSON.stringify({
+      'content-type': 'application/json',
+      'x-api-key': apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН',
+      'x-api-timestamp': timestamp,
+      'signature': signature ? signature.substring(0, 20) + '...' : 'НЕ СГЕНЕРИРОВАНА'
+    }, null, 2));
     console.log('═══════════════════════════════════════════════════════');
 
     const response = await axios.post(`${baseUrl}${path}`, body, {
