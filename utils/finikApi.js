@@ -237,11 +237,29 @@ async function createPayment(params) {
       };
     } else {
       const errorMessage = response.data?.ErrorMessage || response.data?.message || `HTTP ${response.status}`;
-      console.error('Finik API error:', {
-        status: response.status,
-        error: errorMessage,
-        data: response.data
-      });
+      console.error('═══════════════════════════════════════════════════════');
+      console.error('❌ Finik API error:');
+      console.error('   Status:', response.status);
+      console.error('   Status Text:', response.statusText);
+      console.error('   Error Message:', errorMessage);
+      console.error('   Response Data:', JSON.stringify(response.data, null, 2));
+      console.error('   Response Headers:', JSON.stringify(response.headers, null, 2));
+      
+      if (response.status === 403) {
+        console.error('   ⚠️  403 Forbidden - возможные причины:');
+        console.error('      1. Неправильная подпись запроса');
+        console.error('      2. Неправильный путь API (проверьте FINIK_API_PATH, сейчас:', path, ')');
+        console.error('      3. Неправильный API Key');
+        console.error('      4. Неправильный AccountId');
+        console.error('      5. Аккаунт не активирован в системе Финика');
+        console.error('   💡 Проверьте каноническую строку выше - она должна соответствовать документации Финика');
+      } else if (response.status === 401) {
+        console.error('   ⚠️  401 Unauthorized - возможные причины:');
+        console.error('      1. Неправильная подпись запроса');
+        console.error('      2. Неправильный формат подписи');
+        console.error('      3. Проблема с приватным ключом');
+      }
+      console.error('═══════════════════════════════════════════════════════');
       
       return {
         success: false,
