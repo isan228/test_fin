@@ -20,7 +20,8 @@ router.post('/payment', async (req, res) => {
     // Получаем данные из переменных окружения
     const apiKey = process.env.FINIK_API_KEY;
     const accountId = process.env.FINIK_ACCOUNT_ID;
-    const environment = process.env.FINIK_ENVIRONMENT || 'production';
+    // Нормализуем окружение (BETA -> beta, PRODUCTION -> production)
+    const environment = (process.env.FINIK_ENVIRONMENT || 'production').toLowerCase();
 
     // Валидация обязательных переменных окружения
     if (!apiKey) {

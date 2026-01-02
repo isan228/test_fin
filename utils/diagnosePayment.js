@@ -83,17 +83,22 @@ try {
 console.log('\n3️⃣  ПРОВЕРКА ОКРУЖЕНИЯ:');
 console.log('─────────────────────────────────────────────────────');
 
-const environment = process.env.FINIK_ENVIRONMENT || 'production';
+const rawEnvironment = process.env.FINIK_ENVIRONMENT || 'production';
+// Нормализуем окружение (BETA -> beta, PRODUCTION -> production)
+const environment = rawEnvironment.toLowerCase();
 const apiUrl = environment === 'beta' 
   ? 'https://beta.api.acquiring.averspay.kg'
   : 'https://api.acquiring.averspay.kg';
 
-console.log(`   Окружение: ${environment}`);
+console.log(`   Окружение (raw): ${rawEnvironment}`);
+console.log(`   Окружение (нормализовано): ${environment}`);
 console.log(`   API URL: ${apiUrl}`);
 
 if (environment !== 'production' && environment !== 'beta') {
   console.log(`   ⚠️  Неизвестное окружение. Должно быть 'production' или 'beta'`);
   hasErrors = true;
+} else if (rawEnvironment !== environment) {
+  console.log(`   ⚠️  Окружение будет нормализовано: ${rawEnvironment} -> ${environment}`);
 }
 
 // Рекомендации

@@ -15,7 +15,8 @@ router.post('/finik', async (req, res) => {
     console.log('Headers:', JSON.stringify(req.headers, null, 2));
 
     const webhookData = req.body;
-    const environment = process.env.FINIK_ENVIRONMENT || 'production';
+    // Нормализуем окружение (BETA -> beta, PRODUCTION -> production)
+    const environment = (process.env.FINIK_ENVIRONMENT || 'production').toLowerCase();
 
     // Проверяем подпись
     const isValidSignature = verifyWebhookSignature(req, environment);

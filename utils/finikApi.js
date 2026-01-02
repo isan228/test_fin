@@ -66,7 +66,9 @@ async function createPayment(params) {
     environment = 'production'
   } = params;
 
-  const baseUrl = FINIK_API_URLS[environment] || FINIK_API_URLS.production;
+  // Нормализуем окружение (BETA -> beta, PRODUCTION -> production)
+  const normalizedEnv = environment.toLowerCase();
+  const baseUrl = FINIK_API_URLS[normalizedEnv] || FINIK_API_URLS.production;
   const host = new URL(baseUrl).host;
   const timestamp = Date.now().toString();
   const path = '/v1/payment';
@@ -120,7 +122,7 @@ async function createPayment(params) {
     console.log('   Amount:', amount);
     console.log('   PaymentId:', body.PaymentId);
     console.log('   AccountId:', accountId);
-    console.log('   Environment:', environment);
+    console.log('   Environment:', normalizedEnv, `(нормализовано из: ${environment})`);
     console.log('   Base URL:', baseUrl);
     console.log('   API Key (первые 10 символов):', apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН');
     console.log('   Signature:', signature ? signature.substring(0, 20) + '...' : 'НЕ СГЕНЕРИРОВАНА');
