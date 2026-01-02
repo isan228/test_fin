@@ -2,20 +2,35 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.addColumn('api_keys', 'accountId', {
-      type: Sequelize.STRING,
-      allowNull: true
-    });
-    await queryInterface.addColumn('api_keys', 'environment', {
-      type: Sequelize.STRING,
-      defaultValue: 'production',
-      allowNull: false
-    });
+    // Проверяем существование колонок перед добавлением (идемпотентность)
+    const tableDescription = await queryInterface.describeTable('api_keys');
+    
+    if (!tableDescription.accountId) {
+      await queryInterface.addColumn('api_keys', 'accountId', {
+        type: Sequelize.STRING,
+        allowNull: true
+      });
+    }
+    
+    if (!tableDescription.environment) {
+      await queryInterface.addColumn('api_keys', 'environment', {
+        type: Sequelize.STRING,
+        defaultValue: 'production',
+        allowNull: false
+      });
+    }
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeColumn('api_keys', 'accountId');
-    await queryInterface.removeColumn('api_keys', 'environment');
+    const tableDescription = await queryInterface.describeTable('api_keys');
+    
+    if (tableDescription.accountId) {
+      await queryInterface.removeColumn('api_keys', 'accountId');
+    }
+    
+    if (tableDescription.environment) {
+      await queryInterface.removeColumn('api_keys', 'environment');
+    }
   }
 };
 
