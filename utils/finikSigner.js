@@ -87,7 +87,7 @@ function buildCanonicalString(params) {
   }
   
   // 4. Query string parameters (отсортированные, URL-encoded)
-  // Согласно документации: если нет query параметров, не добавляем \n
+  // Если нет query параметров, добавляем пустую строку (только \n)
   if (queryStringParameters && Object.keys(queryStringParameters).length > 0) {
     const queryKeys = Object.keys(queryStringParameters).sort();
     const queryParts = queryKeys.map(key => {
@@ -95,8 +95,10 @@ function buildCanonicalString(params) {
       return `${urlEncode(key)}=${urlEncode(String(value))}`;
     });
     canonical += queryParts.join('&') + '\n';
+  } else {
+    // Если нет query параметров, добавляем пустую строку для правильного формата
+    canonical += '\n';
   }
-  // Если нет query параметров, не добавляем \n (согласно документации)
   
   // 5. JSON body (отсортированные ключи, compact JSON)
   if (body && Object.keys(body).length > 0) {

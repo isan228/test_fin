@@ -98,8 +98,10 @@ try {
     } else if (index === 2) {
       match = actual.includes('host:') && actual.includes('x-api-key:');
     } else if (index === 3) {
+      // Query params - должна быть пустая строка
       match = actual === '';
     } else if (index === 4) {
+      // Body - должен начинаться с {
       match = actual.startsWith('{');
     }
     
