@@ -139,6 +139,12 @@ async function createPayment(params) {
     console.log('   ───────────────────────────────────────────────────');
     console.log(canonicalString);
     console.log('   ───────────────────────────────────────────────────');
+    // Дополнительная диагностика: показываем порядок заголовков
+    const headerLine = canonicalString.split('\n')[2] || '';
+    console.log('   Порядок заголовков в канонической строке:', headerLine);
+    if (!headerLine.startsWith('host:')) {
+      console.error('   ⚠️  ВНИМАНИЕ: Заголовки должны начинаться с "host:", но начинаются с:', headerLine.substring(0, 20));
+    }
     console.log('   Request Body:', JSON.stringify(body, null, 2));
     console.log('   Headers:', JSON.stringify({
       'content-type': 'application/json',
