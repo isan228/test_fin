@@ -68,13 +68,25 @@ function buildCanonicalString(params) {
   // 2. Absolute path (без query string)
   canonical += path + '\n';
   
-  // 3. Headers: host + все x-api-* заголовки, отсортированные по имени
-  const headerKeys = Object.keys(headers || {})
+  // 3. Headers: host должен быть первым, затем все x-api-* заголовки в алфавитном порядке
+  const allHeaderKeys = Object.keys(headers || {})
     .filter(key => {
       const lowerKey = key.toLowerCase();
       return lowerKey === 'host' || lowerKey.startsWith('x-api-');
-    })
+    });
+  
+  // Разделяем на host и x-api-* заголовки
+  const hostKey = allHeaderKeys.find(key => key.toLowerCase() === 'host');
+  const apiHeaderKeys = allHeaderKeys
+    .filter(key => key.toLowerCase() !== 'host')
     .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+  
+  // Формируем массив: сначала host, затем x-api-* в алфавитном порядке
+  const headerKeys = [];
+  if (hostKey) {
+    headerKeys.push(hostKey);
+  }
+  headerKeys.push(...apiHeaderKeys);
   
   if (headerKeys.length > 0) {
     const headerParts = headerKeys.map(key => {

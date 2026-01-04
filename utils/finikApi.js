@@ -247,12 +247,22 @@ async function createPayment(params) {
       
       if (response.status === 403) {
         console.error('   ⚠️  403 Forbidden - возможные причины:');
-        console.error('      1. Неправильная подпись запроса');
+        console.error('      1. Неправильная подпись запроса (проверьте каноническую строку выше)');
         console.error('      2. Неправильный путь API (проверьте FINIK_API_PATH, сейчас:', path, ')');
-        console.error('      3. Неправильный API Key');
-        console.error('      4. Неправильный AccountId');
+        console.error('      3. Неправильный API Key (первые 10 символов):', apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН');
+        console.error('      4. Неправильный AccountId:', accountId);
         console.error('      5. Аккаунт не активирован в системе Финика');
-        console.error('   💡 Проверьте каноническую строку выше - она должна соответствовать документации Финика');
+        console.error('      6. Неправильное окружение (сейчас:', normalizedEnv, ', должно быть production или beta)');
+        console.error('      7. Публичный ключ не зарегистрирован в системе Финика');
+        console.error('   💡 ДЕТАЛЬНАЯ ДИАГНОСТИКА:');
+        console.error('      - Проверьте каноническую строку выше - она должна соответствовать документации Финика');
+        console.error('      - Убедитесь, что используете правильные credentials для окружения', normalizedEnv);
+        console.error('      - Свяжитесь с поддержкой Финика и предоставьте:');
+        console.error('        * AccountId:', accountId);
+        console.error('        * Первые 10 символов API Key:', apiKey ? apiKey.substring(0, 10) + '...' : 'НЕ УСТАНОВЛЕН');
+        console.error('        * Окружение:', normalizedEnv);
+        console.error('        * Каноническую строку (см. выше)');
+        console.error('        * Полный URL:', `${baseUrl}${path}`);
       } else if (response.status === 401) {
         console.error('   ⚠️  401 Unauthorized - возможные причины:');
         console.error('      1. Неправильная подпись запроса');
