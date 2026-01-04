@@ -139,11 +139,20 @@ async function createPayment(params) {
     console.log('   ───────────────────────────────────────────────────');
     console.log(canonicalString);
     console.log('   ───────────────────────────────────────────────────');
-    // Дополнительная диагностика: показываем порядок заголовков
-    const headerLine = canonicalString.split('\n')[2] || '';
+    // Дополнительная диагностика: показываем порядок заголовков и все части
+    const parts = canonicalString.split('\n');
+    console.log('   Детальный разбор канонической строки:');
+    console.log('   1. Метод:', JSON.stringify(parts[0] || ''));
+    console.log('   2. Путь:', JSON.stringify(parts[1] || ''));
+    console.log('   3. Заголовки:', JSON.stringify(parts[2] || ''));
+    console.log('   4. Query параметры:', JSON.stringify(parts[3] || ''));
+    console.log('   5. Body (первые 200 символов):', JSON.stringify((parts[4] || '').substring(0, 200)));
+    const headerLine = parts[2] || '';
     console.log('   Порядок заголовков в канонической строке:', headerLine);
     if (!headerLine.startsWith('host:')) {
       console.error('   ⚠️  ВНИМАНИЕ: Заголовки должны начинаться с "host:", но начинаются с:', headerLine.substring(0, 20));
+    } else {
+      console.log('   ✅ Порядок заголовков правильный: начинается с "host:"');
     }
     console.log('   Request Body:', JSON.stringify(body, null, 2));
     console.log('   Headers:', JSON.stringify({
