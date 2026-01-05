@@ -11,7 +11,8 @@
     "check-key": "node -e \"require('./utils/checkKey').checkPrivateKey()\"",
     "diagnose": "node utils/diagnosePayment.js",
     "test-signature": "node utils/testSignature.js",
-    "extract-public-key": "node utils/extractPublicKey.js"
+    "extract-public-key": "node utils/extractPublicKey.js",
+    "generate-keys": "node utils/generateKeys.js"
   },
   "keywords": ["finik", "payment", "api"],
   "author": "",

@@ -36,6 +36,13 @@ build/
 tmp/
 temp/
 
+# Private keys (не коммитить!)
+privat1
+publ1
+finik_private.pem
+finik_public.pem
+*.pem
+
 
 
 

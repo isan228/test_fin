@@ -1,10 +1,12 @@
 /**
- * Извлекает публичный ключ из приватного ключа
+ * Извлекает публичный ключ из приватного ключа (файл privat1)
+ * и сохраняет его в файл publ1
  * 
  * Запуск: node utils/extractPublicKey.js
  */
 
-require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const { loadPrivateKey } = require('./loadPrivateKey');
 
@@ -13,10 +15,10 @@ console.log('🔑 ИЗВЛЕЧЕНИЕ ПУБЛИЧНОГО КЛЮЧА ИЗ ПР
 console.log('═══════════════════════════════════════════════════════\n');
 
 try {
-  // Загружаем приватный ключ
+  // Загружаем приватный ключ из файла privat1
   const privateKeyPem = loadPrivateKey();
   
-  console.log('✅ Приватный ключ загружен');
+  console.log('✅ Приватный ключ загружен из файла privat1');
   console.log('   Начало:', privateKeyPem.substring(0, 50) + '...');
   console.log('   Конец:', '...' + privateKeyPem.substring(privateKeyPem.length - 50));
   console.log('');
@@ -58,6 +60,12 @@ try {
       throw new Error(`Ошибка извлечения публичного ключа: ${error.message}. Попробуйте: ${pkcs1Error.message}`);
     }
   }
+
+  // Сохраняем публичный ключ в файл publ1
+  const publicKeyPath = path.resolve(process.cwd(), 'publ1');
+  fs.writeFileSync(publicKeyPath, publicKeyPem, 'utf8');
+  console.log(`✅ Публичный ключ сохранен в файл: publ1`);
+  console.log(`   Путь: ${publicKeyPath}\n`);
   
   console.log('═══════════════════════════════════════════════════════');
   console.log('📋 ПУБЛИЧНЫЙ КЛЮЧ (отправьте этот ключ в Финик):');
@@ -66,19 +74,21 @@ try {
   console.log('═══════════════════════════════════════════════════════');
   console.log('');
   console.log('💡 ИНСТРУКЦИЯ:');
-  console.log('   1. Скопируйте публичный ключ выше');
+  console.log('   1. Скопируйте публичный ключ выше (или из файла publ1)');
   console.log('   2. Отправьте его в поддержку Финика');
   console.log('   3. Укажите, что это для PRODUCTION окружения');
-  console.log('   4. Укажите AccountId:', process.env.FINIK_ACCOUNT_ID || 'НЕ УСТАНОВЛЕН');
+  console.log('   4. После получения API ключа и AccountId, добавьте их в .env:');
+  console.log('      FINIK_API_KEY=ваш_api_ключ');
+  console.log('      FINIK_ACCOUNT_ID=ваш_account_id');
   console.log('═══════════════════════════════════════════════════════\n');
   
 } catch (error) {
   console.error('❌ Ошибка:', error.message);
   console.error('');
   console.error('💡 Проверьте:');
-  console.error('   1. Приватный ключ установлен в .env (FINIK_PRIVATE_PEM)');
-  console.error('   2. Или файл finik_private.pem существует в корне проекта');
-  console.error('   3. Формат ключа правильный (PEM)');
+  console.error('   1. Файл privat1 существует в корне проекта');
+  console.error('   2. Формат ключа правильный (PEM)');
+  console.error('   3. Права на запись в директорию проекта (для сохранения publ1)');
   process.exit(1);
 }
 
