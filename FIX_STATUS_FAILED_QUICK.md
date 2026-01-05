@@ -112,3 +112,4 @@ https://api.acquiring.averspay.kg/v1/redirect?paymentId=...&clientId=...
 
 **БЕЗ** `&status=failed` в конце!
 
+
