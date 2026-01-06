@@ -1,6 +1,8 @@
 // Используем node-fetch v3 (ES modules)
 import fetch from 'node-fetch';
-import { Signer } from '@mancho.devs/authorizer';
+// @mancho.devs/authorizer - CommonJS модуль, используем default import
+import authorizerPkg from '@mancho.devs/authorizer';
+const { Signer } = authorizerPkg;
 import { randomUUID } from 'crypto';
 import { FINIK_BASE_URL, FINIK_HOST, FINIK_API_PATH } from '../config/finik.js';
 

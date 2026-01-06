@@ -1,4 +1,6 @@
-import { Verifier } from '@mancho.devs/authorizer';
+// @mancho.devs/authorizer - CommonJS модуль, используем default import
+import authorizerPkg from '@mancho.devs/authorizer';
+const { Verifier } = authorizerPkg;
 
 /**
  * Проверяет подпись webhook от Finik
