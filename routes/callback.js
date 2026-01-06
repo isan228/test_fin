@@ -14,34 +14,32 @@ router.post('/finik', async (req, res) => {
 
     // Определяем окружение из заголовков или используем production по умолчанию
     // Можно добавить логику определения окружения
-    const environment = 'production'; // или 'beta'
+    const environment = (process.env.FINIK_ENVIRONMENT || 'production').toLowerCase();
 
-    // ⚠️ ВРЕМЕННО ОТКЛЮЧЕНО: Проверка подписи (для тестирования)
-    // const isValidSignature = verifyWebhookSignature(req, environment);
-    // 
-    // if (!isValidSignature) {
-    //   console.error('Invalid signature in webhook');
-    //   return res.status(401).json({ 
-    //     success: false, 
-    //     error: 'Invalid signature' 
-    //   });
-    // }
-    console.log('⚠️  ПРОВЕРКА ПОДПИСИ ОТКЛЮЧЕНА ДЛЯ ТЕСТИРОВАНИЯ');
+    // Проверяем подпись
+    const isValidSignature = verifyWebhookSignature(req, environment);
+    
+    if (!isValidSignature) {
+      console.error('Invalid signature in webhook');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid signature' 
+      });
+    }
 
-    // ⚠️ ВРЕМЕННО ОТКЛЮЧЕНО: Проверка timestamp (для тестирования)
-    // const timestamp = parseInt(req.headers['x-api-timestamp']);
-    // const now = Date.now();
-    // const timeDiff = Math.abs(now - timestamp);
-    // const fiveMinutes = 5 * 60 * 1000;
-    //
-    // if (timeDiff > fiveMinutes) {
-    //   console.error('Timestamp too old or too far in future');
-    //   return res.status(401).json({ 
-    //     success: false, 
-    //     error: 'Invalid timestamp' 
-    //   });
-    // }
-    console.log('⚠️  ПРОВЕРКА TIMESTAMP ОТКЛЮЧЕНА ДЛЯ ТЕСТИРОВАНИЯ');
+    // Проверяем timestamp (должен быть в пределах ±5 минут)
+    const timestamp = parseInt(req.headers['x-api-timestamp']);
+    const now = Date.now();
+    const timeDiff = Math.abs(now - timestamp);
+    const fiveMinutes = 5 * 60 * 1000;
+
+    if (timeDiff > fiveMinutes) {
+      console.error('Timestamp too old or too far in future');
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Invalid timestamp' 
+      });
+    }
 
     // Обрабатываем данные webhook
     const transactionId = webhookData.transactionId || webhookData.id;
