@@ -1,65 +1,102 @@
-# 🚀 Быстрый тест платежа
+# Быстрая проверка новой версии
 
-## Шаг 1: Откройте тестовую страницу
+## На сервере выполните:
 
-Откройте в браузере:
-```
-http://2.56.179.126:3000/test-payment
-```
-
-## Шаг 2: Заполните форму
-
-1. **Сумма**: `1` (1 сом для теста)
-2. **Redirect URL**: `http://2.56.179.126:3000/success`
-3. **Webhook URL**: `http://2.56.179.126:3000/webhooks/finik`
-4. **MCC код**: `0742`
-5. **Название (en)**: `Test Payment`
-6. **Описание** (опционально): `Тестовый платеж`
-
-## Шаг 3: Создайте платеж
-
-Нажмите кнопку **"Создать тестовый платеж"**
-
-## Шаг 4: Проверьте результат
-
-### ✅ Успех:
-```json
-{
-  "success": true,
-  "paymentUrl": "https://api.acquiring.averspay.kg/v1/redirect?paymentId=...",
-  "paymentId": "..."
-}
-```
-
-### ❌ Ошибка:
-Если видите ошибку, проверьте логи:
-```bash
-pm2 logs finik-api --lines 50
-```
-
-## Альтернатива: Тест через cURL
+### 1. Обновите код и установите зависимости
 
 ```bash
-curl -X POST http://2.56.179.126:3000/api/finik/payment \
+cd /var/www/finik
+git pull
+npm install
+```
+
+### 2. Проверьте Node.js версию
+
+```bash
+node --version
+```
+
+Должно быть **18.0.0** или выше.
+
+### 3. Проверьте .env
+
+```bash
+cat .env | grep FINIK
+```
+
+Должно быть:
+- `FINIK_ENV=beta` (или `prod`)
+- `FINIK_API_KEY=...`
+- `FINIK_ACCOUNT_ID=...`
+- `FINIK_PRIVATE_KEY=...` (RSA формат)
+- `FINIK_PUBLIC_KEY=...`
+
+### 4. Перезапустите сервер
+
+```bash
+pm2 restart finik-api
+# или если не запущен:
+pm2 start src/server.js --name finik-api
+pm2 save
+```
+
+### 5. Проверьте логи
+
+```bash
+pm2 logs finik-api --lines 20
+```
+
+Должно быть:
+```
+🚀 Server started on http://2.56.179.126:3000
+💳 Payment API: POST http://2.56.179.126:3000/api/payments/create
+🔔 Webhook: POST http://2.56.179.126:3000/api/webhooks/finik
+```
+
+### 6. Тест создания платежа
+
+```bash
+curl -X POST http://2.56.179.126:3000/api/payments/create \
   -H "Content-Type: application/json" \
   -d '{
     "amount": 1,
     "redirectUrl": "http://2.56.179.126:3000/success",
-    "webhookUrl": "http://2.56.179.126:3000/webhooks/finik",
-    "merchantCategoryCode": "0742",
-    "name_en": "Test Payment"
+    "webhookUrl": "http://2.56.179.126:3000/api/webhooks/finik"
   }'
 ```
 
-## Проверка логов на сервере
-
-```bash
-cd /var/www/finik
-pm2 logs finik-api --lines 100
+**Успешный ответ:**
+```json
+{
+  "success": true,
+  "paymentUrl": "https://beta.api.acquiring.averspay.kg/v1/redirect?paymentId=...",
+  "paymentId": "uuid"
+}
 ```
 
-Ищите:
-- ✅ `Ключ загружен из файла: priv1.pem`
-- ✅ `Payment created successfully`
-- ❌ Любые ошибки с подписью или API
+### 7. Тест webhook
 
+```bash
+curl -X POST http://2.56.179.126:3000/api/webhooks/finik \
+  -H "Content-Type: application/json" \
+  -d '{"test": "data"}'
+```
+
+**Ожидаемый ответ:** `401 Unauthorized` - это нормально, значит endpoint работает.
+
+## Если есть ошибки
+
+### Ошибка: "Cannot find module '@mancho.devs/authorizer'"
+
+```bash
+npm install @mancho.devs/authorizer
+pm2 restart finik-api
+```
+
+### Ошибка: "SyntaxError: Cannot use import statement"
+
+Проверьте `package.json` - должно быть `"type": "module"`
+
+### Ошибка: "FINIK_PRIVATE_KEY is not defined"
+
+Проверьте `.env` файл - добавьте `FINIK_PRIVATE_KEY`
