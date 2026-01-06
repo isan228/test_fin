@@ -41,7 +41,7 @@ function loadPrivateKey() {
   let privateKeyPem = process.env.FINIK_PRIVATE_PEM;
   
   if (!privateKeyPem) {
-    throw new Error('Приватный ключ не найден. Создайте файл priv1.pem или установите FINIK_PRIVATE_PEM в .env');
+    throw new Error('Приватный ключ не найден. Создайте файл priv1.pem (npm run generate-keys) или установите FINIK_PRIVATE_PEM в .env');
   }
   
   // Нормализация ключа
