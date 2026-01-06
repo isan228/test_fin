@@ -138,3 +138,4 @@ Base URL: https://api.acquiring.averspay.kg
 
 Убедитесь, что используете правильный URL для вашего окружения.
 
+

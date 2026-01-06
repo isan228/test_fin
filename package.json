@@ -12,7 +12,6 @@
     "diagnose": "node utils/diagnosePayment.js",
     "test-signature": "node utils/testSignature.js",
     "extract-public-key": "node utils/extractPublicKey.js",
-    "generate-keys": "node generate-keys-simple.js",
     "generate-keys": "node generate-keys-simple.js"
   },
   "keywords": ["finik", "payment", "api"],

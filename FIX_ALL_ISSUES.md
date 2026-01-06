@@ -159,3 +159,4 @@ pm2 logs finik-api --lines 50
    - Правильности AccountId и API Key
    - Регистрации публичного ключа
 
+

@@ -20,3 +20,4 @@ WHERE table_name = 'api_keys'
   AND column_name IN ('callbackUrl', 'finikApiKey', 'accountId', 'environment')
 ORDER BY column_name;
 
+
