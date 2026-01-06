@@ -9,7 +9,21 @@ const path = require('path');
  * 3. Из файла finik_private.pem в корне проекта
  */
 function loadPrivateKey() {
-  // Способ 1: Из файла (приоритет)
+  // Способ 1: Из файла priv1.pem (приоритет - новый способ)
+  const keyFile1 = 'priv1.pem';
+  const keyFilePath1 = path.resolve(process.cwd(), keyFile1);
+  
+  if (fs.existsSync(keyFilePath1)) {
+    try {
+      const keyFromFile = fs.readFileSync(keyFilePath1, 'utf8').trim();
+      console.log(`✅ Ключ загружен из файла: ${keyFile1}`);
+      return keyFromFile;
+    } catch (error) {
+      console.warn(`⚠️  Не удалось прочитать файл ${keyFile1}: ${error.message}`);
+    }
+  }
+  
+  // Способ 2: Из файла, указанного в переменной окружения
   const keyFile = process.env.FINIK_PRIVATE_PEM_FILE || 'finik_private.pem';
   const keyFilePath = path.resolve(process.cwd(), keyFile);
   
@@ -23,11 +37,11 @@ function loadPrivateKey() {
     }
   }
   
-  // Способ 2: Из переменной окружения
+  // Способ 3: Из переменной окружения
   let privateKeyPem = process.env.FINIK_PRIVATE_PEM;
   
   if (!privateKeyPem) {
-    throw new Error('FINIK_PRIVATE_PEM не установлен. Установите переменную окружения или создайте файл finik_private.pem');
+    throw new Error('Приватный ключ не найден. Создайте файл priv1.pem или установите FINIK_PRIVATE_PEM в .env');
   }
   
   // Нормализация ключа

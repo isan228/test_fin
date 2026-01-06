@@ -13,8 +13,19 @@ console.log('🔑 ИЗВЛЕЧЕНИЕ ПУБЛИЧНОГО КЛЮЧА ИЗ ПР
 console.log('═══════════════════════════════════════════════════════\n');
 
 try {
-  // Загружаем приватный ключ
-  const privateKeyPem = loadPrivateKey();
+  // Пробуем загрузить из файла priv1.pem, если есть
+  const fs = require('fs');
+  const path = require('path');
+  const priv1Path = path.resolve(process.cwd(), 'priv1.pem');
+  
+  let privateKeyPem;
+  if (fs.existsSync(priv1Path)) {
+    console.log('📁 Используется файл priv1.pem');
+    privateKeyPem = fs.readFileSync(priv1Path, 'utf8').trim();
+  } else {
+    // Загружаем приватный ключ через loadPrivateKey
+    privateKeyPem = loadPrivateKey();
+  }
   
   console.log('✅ Приватный ключ загружен');
   console.log('   Начало:', privateKeyPem.substring(0, 50) + '...');
@@ -70,6 +81,8 @@ try {
   console.log('   2. Отправьте его в поддержку Финика');
   console.log('   3. Укажите, что это для PRODUCTION окружения');
   console.log('   4. Укажите AccountId:', process.env.FINIK_ACCOUNT_ID || 'НЕ УСТАНОВЛЕН');
+  console.log('\n💾 Альтернатива: Если у вас есть файл publ1.pem, используйте его:');
+  console.log('   cat publ1.pem');
   console.log('═══════════════════════════════════════════════════════\n');
   
 } catch (error) {
