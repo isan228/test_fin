@@ -72,16 +72,25 @@ router.post('/finik', async (req, res) => {
         } 
       });
 
+      // ⚠️ ДЛЯ ТЕСТИРОВАНИЯ: Создаем платеж даже без ApiKey
+      const paymentData = {
+        paymentId: transactionId,
+        amount: amount || 0,
+        currency: 'KGS', // Валюта Кыргызстана
+        status: mapFinikStatus(status),
+        callbackData: webhookData
+      };
+
+      // Добавляем apiKeyId только если найден
       if (apiKey) {
-        payment = await Payment.create({
-          apiKeyId: apiKey.id,
-          paymentId: transactionId,
-          amount: amount || 0,
-          currency: 'KGS', // Валюта Кыргызстана
-          status: mapFinikStatus(status),
-          callbackData: webhookData
-        });
+        paymentData.apiKeyId = apiKey.id;
+        console.log('✅ ApiKey найден, создаем платеж с apiKeyId:', apiKey.id);
+      } else {
+        console.log('⚠️  ApiKey не найден для accountId:', accountId, '- создаем платеж без apiKeyId (для тестирования)');
       }
+
+      payment = await Payment.create(paymentData);
+      console.log('✅ Платеж создан:', transactionId, apiKey ? `(apiKeyId: ${apiKey.id})` : '(без apiKeyId)');
     }
 
     if (payment) {
