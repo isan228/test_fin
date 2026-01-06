@@ -56,17 +56,33 @@ export async function createFinikPayment({
   const privateKey = process.env.FINIK_PRIVATE_KEY;
   
   if (!privateKey) {
-    throw new Error('FINIK_PRIVATE_KEY не установлен в переменных окружения');
+    throw new Error('FINIK_PRIVATE_KEY не установлен в переменных окружения. Установите приватный ключ в .env файле.');
   }
   
   // Нормализуем ключ (убираем лишние пробелы и кавычки)
-  const normalizedKey = privateKey
+  let normalizedKey = privateKey
     .replace(/\\n/g, '\n')
     .replace(/^["']|["']$/g, '')
     .trim();
   
-  const signer = new Signer(requestData);
-  const signature = await signer.sign(normalizedKey);
+  // Проверяем формат ключа
+  if (!normalizedKey.includes('BEGIN') || !normalizedKey.includes('END')) {
+    throw new Error('FINIK_PRIVATE_KEY имеет неверный формат. Ключ должен начинаться с -----BEGIN RSA PRIVATE KEY----- и заканчиваться -----END RSA PRIVATE KEY-----');
+  }
+  
+  // Проверяем, что это RSA PRIVATE KEY (не просто PRIVATE KEY)
+  if (!normalizedKey.includes('BEGIN RSA PRIVATE KEY')) {
+    console.warn('⚠️  ВНИМАНИЕ: Ключ должен быть в формате RSA PRIVATE KEY (BEGIN RSA PRIVATE KEY), а не просто PRIVATE KEY');
+  }
+  
+  let signature;
+  try {
+    const signer = new Signer(requestData);
+    signature = await signer.sign(normalizedKey);
+  } catch (signError) {
+    console.error('Ошибка генерации подписи:', signError);
+    throw new Error(`Ошибка генерации подписи: ${signError.message}. Проверьте формат FINIK_PRIVATE_KEY в .env файле. Ключ должен быть в формате RSA PRIVATE KEY.`);
+  }
 
   // Отправляем запрос
   const res = await fetch(`${FINIK_BASE_URL}${FINIK_API_PATH}`, {
