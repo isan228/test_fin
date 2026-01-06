@@ -23,7 +23,19 @@ export function verifyFinikWebhook(req) {
     body: req.body || {}
   };
 
+  const publicKey = process.env.FINIK_PUBLIC_KEY;
+  
+  if (!publicKey) {
+    throw new Error('FINIK_PUBLIC_KEY не установлен в переменных окружения');
+  }
+  
+  // Нормализуем ключ (убираем лишние пробелы и кавычки)
+  const normalizedKey = publicKey
+    .replace(/\\n/g, '\n')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  
   const verifier = new Verifier(requestData);
-  return verifier.verify(process.env.FINIK_PUBLIC_KEY, signature);
+  return verifier.verify(normalizedKey, signature);
 }
 

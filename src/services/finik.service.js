@@ -53,8 +53,20 @@ export async function createFinikPayment({
   };
 
   // Генерируем подпись
+  const privateKey = process.env.FINIK_PRIVATE_KEY;
+  
+  if (!privateKey) {
+    throw new Error('FINIK_PRIVATE_KEY не установлен в переменных окружения');
+  }
+  
+  // Нормализуем ключ (убираем лишние пробелы и кавычки)
+  const normalizedKey = privateKey
+    .replace(/\\n/g, '\n')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+  
   const signer = new Signer(requestData);
-  const signature = await signer.sign(process.env.FINIK_PRIVATE_KEY);
+  const signature = await signer.sign(normalizedKey);
 
   // Отправляем запрос
   const res = await fetch(`${FINIK_BASE_URL}${FINIK_API_PATH}`, {
